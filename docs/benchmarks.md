@@ -60,3 +60,17 @@ Purpose:
 - produce drift metrics on synthetic/sample features
 - compute rolling performance metrics from the public baseline
 - show production ML monitoring patterns without exposing live telemetry
+
+## Latency Demo
+
+Command:
+
+```bash
+make latency-benchmark
+```
+
+Purpose:
+
+- measure local demo prediction contract latency
+- report p50/p95/p99/max
+- avoid benchmarking any production model or checkpoint

@@ -9,6 +9,8 @@ synthetic/sample data
   -> leakage-aware time split
   -> backtest with transaction costs
   -> risk metrics
+  -> local experiment tracking
+  -> manifest-only model registry
   -> serving and monitoring skeletons
 ```
 

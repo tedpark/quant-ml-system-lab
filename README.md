@@ -76,6 +76,8 @@ make test
 make sample-backtest
 make walk-forward
 make monitoring-report
+make experiment-demo
+make latency-benchmark
 ```
 
 The examples write local reports to:
@@ -84,6 +86,8 @@ The examples write local reports to:
 reports/sample_backtest.json
 reports/walk_forward.json
 reports/monitoring_report.json
+reports/experiment_demo.json
+reports/latency_benchmark.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -104,12 +108,13 @@ curl -X POST http://127.0.0.1:8000/predict \
 
 ## Roadmap
 
-1. Create a minimal reproducible validation pipeline.
-2. Add a synthetic pair-trading baseline.
-3. Add regime-aware evaluation examples.
-4. Add CVaR-aware risk-control examples.
-5. Add model serving and monitoring skeletons.
-6. Publish benchmark reports using non-proprietary data.
+1. Create a minimal reproducible validation pipeline. Done.
+2. Add a synthetic pair-trading baseline. Done.
+3. Add walk-forward evaluation examples. Done.
+4. Add CVaR-aware risk-control examples. Done.
+5. Add model serving and monitoring skeletons. Done.
+6. Add local experiment tracking and registry manifests. Done.
+7. Publish benchmark reports using non-proprietary data. In progress.
 
 ## Positioning
 
@@ -133,3 +138,7 @@ It is a portfolio and research-engineering artifact, not investment advice and n
 - Serving schemas: implemented
 - FastAPI demo API: implemented
 - Monitoring metrics and report: implemented
+- Local experiment tracking: implemented
+- Manifest-only model registry: implemented
+- Local latency benchmark: implemented
+- Dockerfile and CI workflow: implemented
