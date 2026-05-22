@@ -1,4 +1,4 @@
-.PHONY: test lint sample-backtest walk-forward monitoring-report
+.PHONY: test lint sample-backtest walk-forward monitoring-report serve
 
 test:
 	python -m pytest -q
@@ -14,3 +14,6 @@ walk-forward:
 
 monitoring-report:
 	python examples/run_monitoring_report.py
+
+serve:
+	uvicorn quant_ml_lab.api:app --app-dir src --reload

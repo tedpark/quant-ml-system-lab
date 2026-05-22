@@ -5,9 +5,11 @@ description = "Sanitized public lab for financial ML system engineering"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.115",
     "numpy>=1.26",
     "pandas>=2.0",
     "pydantic>=2.0",
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]

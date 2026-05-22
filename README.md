@@ -88,6 +88,20 @@ reports/monitoring_report.json
 
 The generated report is intentionally not committed because it is an execution artifact.
 
+Run the sanitized demo API:
+
+```bash
+make serve
+```
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"request_id":"demo-1","features":[0.4,0.3,0.2]}'
+```
+
 ## Roadmap
 
 1. Create a minimal reproducible validation pipeline.
@@ -117,4 +131,5 @@ It is a portfolio and research-engineering artifact, not investment advice and n
 - Tests: implemented
 - Walk-forward evaluation: implemented
 - Serving schemas: implemented
+- FastAPI demo API: implemented
 - Monitoring metrics and report: implemented
