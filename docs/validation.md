@@ -11,3 +11,19 @@ Validation principles:
 - include transaction costs
 - report drawdown, turnover, and Sharpe
 - keep production strategy parameters private
+
+## Walk-Forward Evaluation
+
+The public lab includes fixed-window walk-forward evaluation on synthetic/sample data:
+
+```bash
+make walk-forward
+```
+
+This writes:
+
+```text
+reports/walk_forward.json
+```
+
+The baseline intentionally avoids public parameter search. Production search spaces, thresholds, and live execution rules remain private.

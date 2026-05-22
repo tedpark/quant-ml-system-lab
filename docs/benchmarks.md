@@ -31,3 +31,18 @@ Interpretation:
 ## Disclosure
 
 Production universes, feature recipes, thresholds, checkpoints, live broker paths, and raw performance records are intentionally excluded.
+
+## Walk-Forward Demo
+
+Command:
+
+```bash
+make walk-forward
+```
+
+Purpose:
+
+- verify time-ordered folds
+- separate train and test windows
+- report fold-level metrics
+- provide a safe benchmark artifact without production parameters

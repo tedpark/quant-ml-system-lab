@@ -74,12 +74,14 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 make test
 make sample-backtest
+make walk-forward
 ```
 
-The sample backtest writes a local report to:
+The examples write local reports to:
 
 ```text
 reports/sample_backtest.json
+reports/walk_forward.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -111,4 +113,6 @@ It is a portfolio and research-engineering artifact, not investment advice and n
 - Transaction-cost-aware metrics: implemented
 - CVaR utility examples: implemented
 - Tests: implemented
-- Serving and monitoring skeletons: planned
+- Walk-forward evaluation: implemented
+- Serving schemas: implemented
+- Monitoring skeletons: planned

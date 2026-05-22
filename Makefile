@@ -1,4 +1,4 @@
-.PHONY: test lint sample-backtest
+.PHONY: test lint sample-backtest walk-forward
 
 test:
 	python -m pytest -q
@@ -8,3 +8,6 @@ lint:
 
 sample-backtest:
 	python examples/run_sample_backtest.py
+
+walk-forward:
+	python examples/run_walk_forward.py
