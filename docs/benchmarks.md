@@ -1,0 +1,33 @@
+# Benchmarks
+
+This repository uses synthetic or sample data only. Benchmark outputs are intended to validate system behavior, not to advertise a live trading strategy.
+
+## Sample Pair Baseline
+
+Command:
+
+```bash
+make sample-backtest
+```
+
+Current sample output:
+
+```text
+dataset: synthetic_pair
+train total_return: -0.2302
+train sharpe: -0.9646
+train max_drawdown: -0.3164
+test total_return: -0.1908
+test sharpe: -1.6692
+test max_drawdown: -0.2559
+```
+
+Interpretation:
+
+- This is not a profitable strategy claim.
+- The baseline exists to verify time splits, position generation, transaction costs, and metric computation.
+- Future examples can compare regime filters and risk controls against this baseline without exposing production logic.
+
+## Disclosure
+
+Production universes, feature recipes, thresholds, checkpoints, live broker paths, and raw performance records are intentionally excluded.
