@@ -46,3 +46,17 @@ Purpose:
 - separate train and test windows
 - report fold-level metrics
 - provide a safe benchmark artifact without production parameters
+
+## Monitoring Demo
+
+Command:
+
+```bash
+make monitoring-report
+```
+
+Purpose:
+
+- produce drift metrics on synthetic/sample features
+- compute rolling performance metrics from the public baseline
+- show production ML monitoring patterns without exposing live telemetry

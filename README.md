@@ -75,6 +75,7 @@ python -m pip install -e ".[dev]"
 make test
 make sample-backtest
 make walk-forward
+make monitoring-report
 ```
 
 The examples write local reports to:
@@ -82,6 +83,7 @@ The examples write local reports to:
 ```text
 reports/sample_backtest.json
 reports/walk_forward.json
+reports/monitoring_report.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -115,4 +117,4 @@ It is a portfolio and research-engineering artifact, not investment advice and n
 - Tests: implemented
 - Walk-forward evaluation: implemented
 - Serving schemas: implemented
-- Monitoring skeletons: planned
+- Monitoring metrics and report: implemented
