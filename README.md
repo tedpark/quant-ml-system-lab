@@ -1,5 +1,7 @@
 # Quant ML System Lab
 
+[![CI](https://github.com/tedpark/quant-ml-system-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/tedpark/quant-ml-system-lab/actions/workflows/ci.yml)
+
 Public companion project for financial ML engineering.
 
 This repository is intentionally **sanitized**. It demonstrates the engineering architecture of a financial ML system using synthetic or sample data. Production strategy parameters, live trading rules, broker integrations, private datasets, model checkpoints, and proprietary alpha research are intentionally excluded.
@@ -44,26 +46,33 @@ The goal is not to publish a live trading strategy. The goal is to show how a pr
 - trained production checkpoints
 - raw live-trading performance records
 
-## Planned Structure
+## Repository Structure
 
 ```text
 quant-ml-system-lab/
-  data/
-    sample/
   src/
-    data/
-    features/
-    validation/
-    models/
-    risk/
-    serving/
-    monitoring/
+    quant_ml_lab/
+      api.py
+      benchmarking.py
+      data.py
+      experiments.py
+      monitoring.py
+      risk.py
+      serving.py
+      validation.py
+      walk_forward.py
   tests/
+  examples/
   docs/
     architecture.md
-    validation.md
     benchmarks.md
+    deployment.md
+    experiments.md
+    monitoring.md
+    public_boundary.md
+    recruiting_notes.md
     serving.md
+    validation.md
 ```
 
 ## Quickstart

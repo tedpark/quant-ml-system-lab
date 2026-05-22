@@ -15,3 +15,8 @@ synthetic/sample data
 ```
 
 The production boundary is intentional: live universes, feature recipes, thresholds, model checkpoints, broker code, and raw performance records are excluded.
+
+See also:
+
+- `docs/public_boundary.md`
+- `docs/recruiting_notes.md`
