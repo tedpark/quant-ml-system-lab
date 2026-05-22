@@ -37,6 +37,7 @@ Endpoints:
 GET  /health
 GET  /model/info
 POST /predict
+GET  /metrics
 ```
 
 Example:
@@ -51,4 +52,10 @@ Latency benchmark:
 
 ```bash
 make latency-benchmark
+```
+
+Monitoring snapshot:
+
+```bash
+curl http://127.0.0.1:8000/metrics
 ```

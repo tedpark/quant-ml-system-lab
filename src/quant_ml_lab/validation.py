@@ -20,7 +20,9 @@ class BacktestMetrics:
     annualized_return: float
     annualized_volatility: float
     sharpe: float
+    sortino: float
     max_drawdown: float
+    win_rate: float
     turnover: float
     trades: int
 
@@ -30,7 +32,9 @@ class BacktestMetrics:
             "annualized_return": self.annualized_return,
             "annualized_volatility": self.annualized_volatility,
             "sharpe": self.sharpe,
+            "sortino": self.sortino,
             "max_drawdown": self.max_drawdown,
+            "win_rate": self.win_rate,
             "turnover": self.turnover,
             "trades": self.trades,
         }
@@ -105,9 +109,14 @@ def compute_metrics(returns: pd.Series, turnover: pd.Series) -> BacktestMetrics:
     ann_return = float((1.0 + total_return) ** (252.0 / max(len(returns), 1)) - 1.0)
     ann_vol = float(returns.std(ddof=0) * np.sqrt(252.0))
     sharpe = float(ann_return / ann_vol) if ann_vol > 0 else 0.0
+    downside = returns[returns < 0.0]
+    downside_vol = float(downside.std(ddof=0) * np.sqrt(252.0)) if len(downside) else 0.0
+    sortino = float(ann_return / downside_vol) if downside_vol > 0 else 0.0
     running_max = equity.cummax()
     drawdown = equity / running_max - 1.0
     max_drawdown = float(drawdown.min()) if len(drawdown) else 0.0
+    active_returns = returns[returns != 0.0]
+    win_rate = float((active_returns > 0.0).mean()) if len(active_returns) else 0.0
     total_turnover = float(turnover.sum())
     trades = int((turnover > 0).sum())
     return BacktestMetrics(
@@ -115,7 +124,9 @@ def compute_metrics(returns: pd.Series, turnover: pd.Series) -> BacktestMetrics:
         annualized_return=ann_return,
         annualized_volatility=ann_vol,
         sharpe=sharpe,
+        sortino=sortino,
         max_drawdown=max_drawdown,
+        win_rate=win_rate,
         turnover=total_turnover,
         trades=trades,
     )

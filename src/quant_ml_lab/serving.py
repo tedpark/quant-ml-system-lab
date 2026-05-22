@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -30,6 +31,8 @@ class PredictionResponse(BaseModel):
     model_name: str
     signal: Literal["risk_off", "neutral", "risk_on"]
     confidence: float = Field(ge=0.0, le=1.0)
+    feature_count: int = Field(ge=1)
+    generated_at: str
     disclosure: str = "Synthetic/demo response only. Not investment advice."
 
 
@@ -48,4 +51,6 @@ def demo_predict(request: PredictionRequest) -> PredictionResponse:
         model_name=request.model_name,
         signal=signal,
         confidence=confidence,
+        feature_count=len(request.features),
+        generated_at=datetime.now(UTC).isoformat(),
     )

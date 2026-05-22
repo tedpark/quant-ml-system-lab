@@ -74,3 +74,31 @@ Purpose:
 - measure local demo prediction contract latency
 - report p50/p95/p99/max
 - avoid benchmarking any production model or checkpoint
+
+## Generated Benchmark Reports
+
+Run every public report:
+
+```bash
+make all-reports
+```
+
+This generates JSON artifacts under `reports/` and Markdown summaries under `docs/benchmark_reports/`.
+
+Current Markdown reports:
+
+- `docs/benchmark_reports/baseline_vs_regime_filter.md`
+- `docs/benchmark_reports/cvar_sizing.md`
+- `docs/benchmark_reports/rl_sizing_comparison.md`
+- `docs/benchmark_reports/serving_latency.md`
+
+Current JSON reports:
+
+- `reports/sample_backtest.json`
+- `reports/walk_forward.json`
+- `reports/baseline_vs_regime_filter.json`
+- `reports/cvar_sizing.json`
+- `reports/rl_sizing_comparison.json`
+- `reports/monitoring_report.json`
+- `reports/experiment_demo.json`
+- `reports/latency_benchmark.json`

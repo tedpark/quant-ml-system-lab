@@ -57,18 +57,24 @@ quant-ml-system-lab/
       data.py
       experiments.py
       monitoring.py
+      regime.py
       risk.py
       serving.py
+      sizing.py
       validation.py
       walk_forward.py
   tests/
   examples/
   docs/
+    ai_quant_strategy.md
     architecture.md
     benchmarks.md
+    benchmark_reports/
+    career_strategy.md
     deployment.md
     experiments.md
     monitoring.md
+    portfolio_artifacts.md
     public_boundary.md
     recruiting_notes.md
     serving.md
@@ -87,6 +93,7 @@ make walk-forward
 make monitoring-report
 make experiment-demo
 make latency-benchmark
+make all-reports
 ```
 
 The examples write local reports to:
@@ -97,6 +104,9 @@ reports/walk_forward.json
 reports/monitoring_report.json
 reports/experiment_demo.json
 reports/latency_benchmark.json
+reports/baseline_vs_regime_filter.json
+reports/cvar_sizing.json
+reports/rl_sizing_comparison.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -134,6 +144,15 @@ financial data -> features -> model training -> walk-forward evaluation -> risk 
 ```
 
 It is a portfolio and research-engineering artifact, not investment advice and not a trading recommendation.
+
+See also:
+
+- [AI Quant Strategy](docs/ai_quant_strategy.md)
+- [Career Strategy](docs/career_strategy.md)
+- [Portfolio Artifact Plan](docs/portfolio_artifacts.md)
+- [Benchmark Reports](docs/benchmark_reports/)
+- [Recruiting Notes](docs/recruiting_notes.md)
+- [Public / Private Boundary](docs/public_boundary.md)
 
 ## Current Status
 

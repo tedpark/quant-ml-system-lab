@@ -37,6 +37,8 @@ def test_predict_endpoint():
     assert body["request_id"] == "req-1"
     assert body["signal"] == "risk_on"
     assert 0.0 <= body["confidence"] <= 1.0
+    assert body["feature_count"] == 3
+    assert "generated_at" in body
 
 
 def test_predict_rejects_empty_features():
@@ -45,3 +47,14 @@ def test_predict_rejects_empty_features():
     response = client.post("/predict", json={"features": []})
 
     assert response.status_code == 422
+
+
+def test_metrics_endpoint():
+    client = TestClient(create_app())
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["dataset"] == "synthetic_pair"
+    assert len(body["feature_drift"]) == 2

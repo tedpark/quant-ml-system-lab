@@ -22,3 +22,5 @@ def test_demo_predict_returns_bounded_confidence():
     assert response.request_id == "req-1"
     assert response.signal == "risk_on"
     assert 0.0 <= response.confidence <= 1.0
+    assert response.feature_count == 3
+    assert response.generated_at

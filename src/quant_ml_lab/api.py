@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from quant_ml_lab.data import SyntheticPairConfig, make_synthetic_pair, train_test_split_time
+from quant_ml_lab.monitoring import feature_drift_report
 from quant_ml_lab.serving import ModelInfo, PredictionRequest, PredictionResponse, demo_predict
 
 
@@ -30,6 +32,17 @@ def create_app() -> FastAPI:
     @app.post("/predict", response_model=PredictionResponse)
     def predict(request: PredictionRequest) -> PredictionResponse:
         return demo_predict(request)
+
+    @app.get("/metrics")
+    def metrics() -> dict[str, object]:
+        df = make_synthetic_pair(SyntheticPairConfig(periods=220))
+        expected, actual = train_test_split_time(df)
+        drift = feature_drift_report(expected, actual, ["asset_a", "asset_b"])
+        return {
+            "dataset": "synthetic_pair",
+            "disclosure": "Demo monitoring snapshot only. Not connected to live trading.",
+            "feature_drift": [metric.as_dict() for metric in drift],
+        }
 
     return app
 
