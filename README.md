@@ -15,6 +15,7 @@ This lab focuses on the engineering layer around quantitative ML systems:
 - baseline strategy comparison
 - regime-aware modeling patterns
 - distributional RL risk-control concepts
+- RL fundamentals labs
 - CVaR-aware position sizing examples
 - MLflow-style experiment tracking
 - FastAPI-style model serving
@@ -58,6 +59,7 @@ quant-ml-system-lab/
       experiments.py
       monitoring.py
       regime.py
+      rl.py
       risk.py
       serving.py
       sizing.py
@@ -73,6 +75,7 @@ quant-ml-system-lab/
     career_strategy.md
     deployment.md
     experiments.md
+    learning_lab.md
     monitoring.md
     portfolio_artifacts.md
     public_boundary.md
@@ -93,6 +96,7 @@ make walk-forward
 make monitoring-report
 make experiment-demo
 make latency-benchmark
+make q-learning-gridworld
 make all-reports
 ```
 
@@ -107,6 +111,7 @@ reports/latency_benchmark.json
 reports/baseline_vs_regime_filter.json
 reports/cvar_sizing.json
 reports/rl_sizing_comparison.json
+reports/q_learning_gridworld.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -134,6 +139,7 @@ curl -X POST http://127.0.0.1:8000/predict \
 5. Add model serving and monitoring skeletons. Done.
 6. Add local experiment tracking and registry manifests. Done.
 7. Publish benchmark reports using non-proprietary data. In progress.
+8. Build an ML/AI/RL learning lab with reproducible experiments. In progress.
 
 ## Positioning
 
@@ -150,6 +156,7 @@ See also:
 - [AI Quant Strategy](docs/ai_quant_strategy.md)
 - [Career Strategy](docs/career_strategy.md)
 - [Portfolio Artifact Plan](docs/portfolio_artifacts.md)
+- [ML / AI / RL Learning Lab](docs/learning_lab.md)
 - [Benchmark Reports](docs/benchmark_reports/)
 - [Recruiting Notes](docs/recruiting_notes.md)
 - [Public / Private Boundary](docs/public_boundary.md)
@@ -170,3 +177,4 @@ See also:
 - Manifest-only model registry: implemented
 - Local latency benchmark: implemented
 - Dockerfile and CI workflow: implemented
+- RL fundamentals lab: implemented

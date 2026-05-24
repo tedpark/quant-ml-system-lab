@@ -9,6 +9,7 @@ synthetic/sample data
   -> leakage-aware time split
   -> backtest with transaction costs
   -> risk metrics
+  -> RL fundamentals labs
   -> local experiment tracking
   -> manifest-only model registry
   -> serving and monitoring skeletons
@@ -20,3 +21,4 @@ See also:
 
 - `docs/public_boundary.md`
 - `docs/recruiting_notes.md`
+- `docs/learning_lab.md`
