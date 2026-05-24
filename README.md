@@ -57,11 +57,13 @@ quant-ml-system-lab/
       benchmarking.py
       data.py
       experiments.py
+      hmm_rl.py
       monitoring.py
       regime.py
       rl.py
       sac.py
       torch_sac.py
+      torch_sac_sizing.py
       risk.py
       serving.py
       sizing.py
@@ -101,6 +103,7 @@ make latency-benchmark
 make q-learning-gridworld
 make sac-bandit
 make torch-sac
+make hmm-sac-sizing
 make all-reports
 ```
 
@@ -118,6 +121,7 @@ reports/rl_sizing_comparison.json
 reports/q_learning_gridworld.json
 reports/sac_bandit.json
 reports/torch_sac_quadratic.json
+reports/hmm_sac_sizing.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -186,3 +190,4 @@ See also:
 - RL fundamentals lab: implemented
 - SAC concept lab: implemented
 - PyTorch SAC learning lab: implemented
+- Forward-HMM + SAC position sizing lab: implemented

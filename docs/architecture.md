@@ -10,6 +10,7 @@ synthetic/sample data
   -> backtest with transaction costs
   -> risk metrics
   -> RL fundamentals labs
+  -> forward-HMM + SAC sizing lab
   -> local experiment tracking
   -> manifest-only model registry
   -> serving and monitoring skeletons

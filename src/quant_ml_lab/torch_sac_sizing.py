@@ -1,0 +1,131 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+
+from quant_ml_lab.torch_sac import TorchSACConfig, train_torch_sac
+from quant_ml_lab.validation import BacktestMetrics, compute_metrics
+
+
+@dataclass(frozen=True)
+class HMMSizingEnvConfig:
+    transaction_cost_bps: float = 2.0
+    turnover_penalty: float = 0.0005
+    high_vol_penalty: float = 0.001
+    max_steps: int | None = None
+
+
+class HMMSACPositionSizingEnv:
+    """Sequential RL environment for HMM-aware position multiplier learning.
+
+    Action is a continuous value in [-1, 1]. It is mapped to multiplier [0, 1].
+    The multiplier scales the baseline position. The environment is synthetic
+    and sanitized; it is not a production trading strategy.
+    """
+
+    def __init__(
+        self,
+        frame: pd.DataFrame,
+        feature_columns: tuple[str, ...],
+        config: HMMSizingEnvConfig | None = None,
+    ) -> None:
+        self.frame = frame.reset_index(drop=True).copy()
+        self.feature_columns = feature_columns
+        self.config = config or HMMSizingEnvConfig()
+        self.cursor = 0
+        self.prev_position = 0.0
+        self.net_returns: list[float] = []
+        self.positions: list[float] = []
+
+    @property
+    def state_dim(self) -> int:
+        return len(self.feature_columns)
+
+    @property
+    def action_dim(self) -> int:
+        return 1
+
+    def reset(self) -> np.ndarray:
+        self.cursor = 0
+        self.prev_position = 0.0
+        self.net_returns = []
+        self.positions = []
+        return self._state()
+
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool]:
+        raw_action = float(np.clip(action[0], -1.0, 1.0))
+        multiplier = 0.5 * (raw_action + 1.0)
+        row = self.frame.iloc[self.cursor]
+        baseline_position = float(row["baseline_position"])
+        sized_position = baseline_position * multiplier
+        spread_return_next = float(row["spread_return_next"])
+        gross_return = sized_position * -spread_return_next
+        turnover = abs(sized_position - self.prev_position)
+        cost = turnover * (self.config.transaction_cost_bps / 10_000.0)
+        risk_penalty = float(row["high_vol_prob"]) * abs(sized_position) * self.config.high_vol_penalty
+        reward = gross_return - cost - turnover * self.config.turnover_penalty - risk_penalty
+
+        self.prev_position = sized_position
+        self.net_returns.append(gross_return - cost)
+        self.positions.append(sized_position)
+        self.cursor += 1
+
+        limit = self.config.max_steps or len(self.frame)
+        done = self.cursor >= min(limit, len(self.frame))
+        next_state = self._state() if not done else np.zeros(self.state_dim, dtype=np.float32)
+        return next_state, float(reward), done
+
+    def _state(self) -> np.ndarray:
+        return self.frame.loc[self.cursor, list(self.feature_columns)].to_numpy(dtype=np.float32)
+
+
+@dataclass(frozen=True)
+class HMMSACTrainingReport:
+    deterministic_action: float
+    mean_multiplier: float
+    metrics: BacktestMetrics
+    reward_tail_mean: float
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "deterministic_action": self.deterministic_action,
+            "mean_multiplier": self.mean_multiplier,
+            "metrics": self.metrics.as_dict(),
+            "reward_tail_mean": self.reward_tail_mean,
+        }
+
+
+def train_hmm_sac_sizer(
+    frame: pd.DataFrame,
+    feature_columns: tuple[str, ...],
+    sac_config: TorchSACConfig | None = None,
+    env_config: HMMSizingEnvConfig | None = None,
+) -> tuple[HMMSACTrainingReport, pd.DataFrame]:
+    env = HMMSACPositionSizingEnv(frame, feature_columns, env_config)
+    result = train_torch_sac(env, sac_config or TorchSACConfig(steps=260, gamma=0.95))
+
+    eval_env = HMMSACPositionSizingEnv(frame, feature_columns, env_config)
+    state = eval_env.reset()
+    done = False
+    while not done:
+        # Public demo: use the learned deterministic action as a stable policy proxy.
+        action = np.array([result.deterministic_action], dtype=np.float32)
+        state, _, done = eval_env.step(action)
+
+    output = frame.iloc[: len(eval_env.net_returns)].copy()
+    output["sac_sized_position"] = eval_env.positions
+    output["sac_net_return"] = eval_env.net_returns
+    output["sac_equity"] = (1.0 + output["sac_net_return"]).cumprod()
+    turnover = output["sac_sized_position"].diff().abs().fillna(output["sac_sized_position"].abs())
+    multiplier = (
+        output["sac_sized_position"].abs() / output["baseline_position"].abs().replace(0.0, np.nan)
+    ).fillna(0.0)
+    report = HMMSACTrainingReport(
+        deterministic_action=result.deterministic_action,
+        mean_multiplier=float(multiplier.mean()),
+        metrics=compute_metrics(output["sac_net_return"], turnover),
+        reward_tail_mean=float(np.mean(result.reward_trace[-20:])),
+    )
+    return report, output

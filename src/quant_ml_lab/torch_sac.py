@@ -232,8 +232,9 @@ def train_torch_sac(
         critic_loss_trace.append(critic_loss)
         actor_loss_trace.append(actor_loss)
 
+    eval_state = torch.as_tensor(env.reset(), dtype=torch.float32).unsqueeze(0)
     with torch.no_grad():
-        deterministic_action = actor.deterministic(torch.tensor([[1.0]])).item()
+        deterministic_action = actor.deterministic(eval_state).item()
     return TorchSACResult(
         deterministic_action=deterministic_action,
         reward_trace=reward_trace,
