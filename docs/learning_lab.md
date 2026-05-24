@@ -64,8 +64,10 @@ Topics:
 Artifacts:
 
 - `src/quant_ml_lab/rl.py`
+- `src/quant_ml_lab/sac.py`
 - `examples/run_q_learning_gridworld.py`
-- future DQN/PPO/SAC examples
+- `examples/run_sac_bandit.py`
+- future DQN/PPO/neural SAC examples
 
 ### Track 4. Financial ML / RL
 
@@ -107,6 +109,44 @@ Why this exists:
 - creates a bridge toward DQN and financial RL
 - avoids pretending that trading RL is simple
 
+## Current SAC Lab
+
+The first SAC lab is a one-state continuous bandit with a small discrete action grid.
+
+It demonstrates SAC concepts without adding a deep learning dependency yet:
+
+- stochastic policy
+- twin critics
+- entropy term
+- soft value target
+- actor update toward high soft-Q actions
+
+Run:
+
+```bash
+python examples/run_sac_bandit.py
+```
+
+Output:
+
+```text
+reports/sac_bandit.json
+```
+
+Why this exists:
+
+- builds SAC intuition before neural networks
+- keeps tests fast and deterministic
+- avoids exposing trading logic
+- creates a bridge toward PyTorch SAC and later financial position sizing
+
+Next SAC steps:
+
+1. Add replay buffer and neural actor/critic with PyTorch.
+2. Train on a small continuous-control toy environment.
+3. Add tests for tensor shapes, action bounds, and loss finiteness.
+4. Only then connect SAC concepts to sanitized financial sizing examples.
+
 ## Monthly Learning Outputs
 
 Each month should produce at least one of:
@@ -117,4 +157,3 @@ Each month should produce at least one of:
 - one blog draft
 - one model serving or monitoring improvement
 - one paper implementation note
-

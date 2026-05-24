@@ -60,6 +60,7 @@ quant-ml-system-lab/
       monitoring.py
       regime.py
       rl.py
+      sac.py
       risk.py
       serving.py
       sizing.py
@@ -97,6 +98,7 @@ make monitoring-report
 make experiment-demo
 make latency-benchmark
 make q-learning-gridworld
+make sac-bandit
 make all-reports
 ```
 
@@ -112,6 +114,7 @@ reports/baseline_vs_regime_filter.json
 reports/cvar_sizing.json
 reports/rl_sizing_comparison.json
 reports/q_learning_gridworld.json
+reports/sac_bandit.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -178,3 +181,4 @@ See also:
 - Local latency benchmark: implemented
 - Dockerfile and CI workflow: implemented
 - RL fundamentals lab: implemented
+- SAC concept lab: implemented
