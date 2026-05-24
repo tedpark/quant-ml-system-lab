@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Final
 
 import numpy as np
@@ -72,18 +73,23 @@ class ReplayBuffer:
     def __len__(self) -> int:
         return len(self.items)
 
-    def sample(self, batch_size: int) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    def sample(
+        self,
+        batch_size: int,
+        device: torch.device | None = None,
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         if batch_size > len(self.items):
             raise ValueError("batch_size exceeds replay buffer length")
         indices = self.rng.choice(len(self.items), size=batch_size, replace=False)
         batch = [self.items[int(index)] for index in indices]
         states, actions, rewards, next_states, dones = zip(*batch, strict=True)
+        target_device = device or torch.device("cpu")
         return (
-            torch.as_tensor(np.asarray(states), dtype=torch.float32),
-            torch.as_tensor(np.asarray(actions), dtype=torch.float32),
-            torch.as_tensor(np.asarray(rewards), dtype=torch.float32).unsqueeze(-1),
-            torch.as_tensor(np.asarray(next_states), dtype=torch.float32),
-            torch.as_tensor(np.asarray(dones), dtype=torch.float32).unsqueeze(-1),
+            torch.as_tensor(np.asarray(states), dtype=torch.float32, device=target_device),
+            torch.as_tensor(np.asarray(actions), dtype=torch.float32, device=target_device),
+            torch.as_tensor(np.asarray(rewards), dtype=torch.float32, device=target_device).unsqueeze(-1),
+            torch.as_tensor(np.asarray(next_states), dtype=torch.float32, device=target_device),
+            torch.as_tensor(np.asarray(dones), dtype=torch.float32, device=target_device).unsqueeze(-1),
         )
 
 
@@ -155,6 +161,8 @@ class TorchSACConfig:
     critic_lr: float = 3e-3
     hidden_dim: int = 32
     seed: int = 123
+    replay_capacity: int = 10_000
+    device: str = "cpu"
 
 
 @dataclass(frozen=True)
@@ -166,6 +174,9 @@ class TorchSACResult:
     alpha_trace: list[float]
     alpha_loss_trace: list[float]
     actor: GaussianActor
+    config: TorchSACConfig
+    state_dim: int
+    action_dim: int
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -186,12 +197,13 @@ def train_torch_sac(
     _validate_config(cfg)
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng(cfg.seed)
+    device = _resolve_device(cfg.device)
 
-    actor = GaussianActor(env.state_dim, env.action_dim, cfg.hidden_dim)
-    q1 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim)
-    q2 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim)
-    target_q1 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim)
-    target_q2 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim)
+    actor = GaussianActor(env.state_dim, env.action_dim, cfg.hidden_dim).to(device)
+    q1 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim).to(device)
+    q2 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim).to(device)
+    target_q1 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim).to(device)
+    target_q2 = Critic(env.state_dim, env.action_dim, cfg.hidden_dim).to(device)
     target_q1.load_state_dict(q1.state_dict())
     target_q2.load_state_dict(q2.state_dict())
 
@@ -201,10 +213,11 @@ def train_torch_sac(
     log_alpha = torch.tensor(
         np.log(cfg.alpha_init),
         dtype=torch.float32,
+        device=device,
         requires_grad=cfg.automatic_entropy_tuning,
     )
     alpha_opt = torch.optim.Adam([log_alpha], lr=cfg.alpha_lr)
-    buffer = ReplayBuffer(seed=cfg.seed)
+    buffer = ReplayBuffer(capacity=cfg.replay_capacity, seed=cfg.seed)
 
     reward_trace: list[float] = []
     actor_loss_trace: list[float] = []
@@ -218,8 +231,10 @@ def train_torch_sac(
             action = rng.uniform(-1.0, 1.0, size=(env.action_dim,)).astype(np.float32)
         else:
             with torch.no_grad():
-                action_tensor, _ = actor.sample(torch.as_tensor(state).float().unsqueeze(0))
-            action = action_tensor.squeeze(0).numpy().astype(np.float32)
+                action_tensor, _ = actor.sample(
+                    torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+                )
+            action = action_tensor.squeeze(0).cpu().numpy().astype(np.float32)
 
         next_state, reward, done = env.step(action)
         buffer.push(state, action, reward, next_state, done)
@@ -229,7 +244,7 @@ def train_torch_sac(
         if len(buffer) < cfg.batch_size:
             continue
 
-        states, actions, rewards, next_states, dones = buffer.sample(cfg.batch_size)
+        states, actions, rewards, next_states, dones = buffer.sample(cfg.batch_size, device)
         alpha = _current_alpha(log_alpha, cfg)
         critic_loss = _update_critics(
             actor,
@@ -256,10 +271,11 @@ def train_torch_sac(
         alpha_trace.append(float(_current_alpha(log_alpha, cfg).detach().item()))
         alpha_loss_trace.append(alpha_loss)
 
-    eval_state = torch.as_tensor(env.reset(), dtype=torch.float32).unsqueeze(0)
+    eval_state = torch.as_tensor(env.reset(), dtype=torch.float32, device=device).unsqueeze(0)
     actor.eval()
     with torch.no_grad():
         deterministic_action = actor.deterministic(eval_state).item()
+    actor.cpu()
     return TorchSACResult(
         deterministic_action=deterministic_action,
         reward_trace=reward_trace,
@@ -268,6 +284,9 @@ def train_torch_sac(
         alpha_trace=alpha_trace,
         alpha_loss_trace=alpha_loss_trace,
         actor=actor,
+        config=cfg,
+        state_dim=env.state_dim,
+        action_dim=env.action_dim,
     )
 
 
@@ -284,12 +303,20 @@ def _validate_config(cfg: TorchSACConfig) -> None:
         raise ValueError("tau must be in (0, 1]")
     if cfg.alpha <= 0.0 or cfg.alpha_init <= 0.0 or cfg.alpha_floor <= 0.0:
         raise ValueError("alpha values must be positive")
+    if cfg.replay_capacity < cfg.batch_size:
+        raise ValueError("replay_capacity must be at least batch_size")
+
+
+def _resolve_device(device: str) -> torch.device:
+    if device == "cuda" and not torch.cuda.is_available():
+        return torch.device("cpu")
+    return torch.device(device)
 
 
 def _current_alpha(log_alpha: Tensor, cfg: TorchSACConfig) -> Tensor:
     if cfg.automatic_entropy_tuning:
         return log_alpha.exp().clamp_min(cfg.alpha_floor).detach()
-    return torch.tensor(cfg.alpha, dtype=torch.float32)
+    return torch.tensor(cfg.alpha, dtype=torch.float32, device=log_alpha.device)
 
 
 def _update_critics(
@@ -362,3 +389,31 @@ def _soft_update(target: nn.Module, source: nn.Module, tau: float) -> None:
     with torch.no_grad():
         for target_param, source_param in zip(target.parameters(), source.parameters(), strict=True):
             target_param.data.mul_(1.0 - tau).add_(source_param.data, alpha=tau)
+
+
+def save_sac_actor_checkpoint(result: TorchSACResult, path: str | Path) -> None:
+    checkpoint_path = Path(path)
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "actor_state_dict": result.actor.state_dict(),
+            "config": asdict(result.config),
+            "state_dim": result.state_dim,
+            "action_dim": result.action_dim,
+            "hidden_dim": result.config.hidden_dim,
+            "deterministic_action": result.deterministic_action,
+        },
+        checkpoint_path,
+    )
+
+
+def load_sac_actor_checkpoint(path: str | Path, map_location: str = "cpu") -> GaussianActor:
+    payload = torch.load(Path(path), map_location=map_location, weights_only=False)
+    actor = GaussianActor(
+        state_dim=int(payload["state_dim"]),
+        action_dim=int(payload["action_dim"]),
+        hidden_dim=int(payload["hidden_dim"]),
+    )
+    actor.load_state_dict(payload["actor_state_dict"])
+    actor.eval()
+    return actor

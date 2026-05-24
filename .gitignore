@@ -11,3 +11,4 @@ src/*.egg-info/
 reports/*.json
 reports/*.jsonl
 reports/*.csv
+artifacts/rl_checkpoints/*.pt

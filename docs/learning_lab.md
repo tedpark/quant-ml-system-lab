@@ -72,6 +72,7 @@ Artifacts:
 - `examples/run_sac_bandit.py`
 - `examples/run_torch_sac_quadratic.py`
 - `examples/run_hmm_sac_sizing.py`
+- `examples/run_hmm_sac_training_validation.py`
 - future DQN/PPO examples
 
 ### Track 4. Financial ML / RL
@@ -199,6 +200,7 @@ The public repository intentionally ports only the architecture-level learning p
 - entropy-regularized actor update
 - automatic alpha tuning
 - soft target updates
+- checkpoint save and reload
 - sanitized HMM regime features
 - sanitized position-sizing environment
 
@@ -240,6 +242,28 @@ What it demonstrates:
 - Evaluation uses the learned state-dependent deterministic policy.
 - Reward includes transaction cost, turnover penalty, and high-volatility exposure penalty.
 
+Run the production-style validation loop:
+
+```bash
+python examples/run_hmm_sac_training_validation.py
+```
+
+Output:
+
+```text
+reports/hmm_sac_training_validation.json
+artifacts/rl_checkpoints/hmm_sac_seed_*.pt
+```
+
+What the validation loop adds:
+
+- train/validation split inside the public RL frame
+- multi-seed SAC training
+- checkpoint save and reload
+- validation after checkpoint reload
+- finite-metric acceptance gates
+- train and validation metrics in one report
+
 What it intentionally does not include:
 
 - production universe
@@ -250,6 +274,8 @@ What it intentionally does not include:
 - private checkpoints
 
 This is the public learning-lab version of the idea: HMM structures the market state, and RL is constrained to risk/sizing decisions.
+
+Production-grade does not mean "profitable" in this public lab. It means the training loop has the control points required before any model could be trusted: deterministic data split, repeated seeds, held-out validation, checkpoint reproducibility, explicit metrics, and documented failure gates.
 
 ## Monthly Learning Outputs
 

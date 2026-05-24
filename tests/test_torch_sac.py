@@ -7,6 +7,8 @@ from quant_ml_lab.torch_sac import (
     QuadraticEnvConfig,
     ReplayBuffer,
     TorchSACConfig,
+    load_sac_actor_checkpoint,
+    save_sac_actor_checkpoint,
     train_torch_sac,
 )
 
@@ -74,3 +76,22 @@ def test_torch_sac_can_use_fixed_alpha():
     assert result.alpha_trace
     assert set(round(value, 6) for value in result.alpha_trace) == {0.03}
     assert set(result.alpha_loss_trace) == {0.0}
+
+
+def test_sac_actor_checkpoint_round_trip(tmp_path):
+    env = QuadraticActionEnv(QuadraticEnvConfig(target_action=0.4))
+    result = train_torch_sac(
+        env,
+        TorchSACConfig(steps=80, warmup_steps=16, batch_size=16, hidden_dim=16, seed=31),
+    )
+    checkpoint_path = tmp_path / "actor.pt"
+
+    save_sac_actor_checkpoint(result, checkpoint_path)
+    loaded_actor = load_sac_actor_checkpoint(checkpoint_path)
+
+    state = torch.ones(1, 1)
+    with torch.no_grad():
+        original_action = result.actor.deterministic(state)
+        loaded_action = loaded_actor.deterministic(state)
+    assert checkpoint_path.exists()
+    assert torch.allclose(original_action, loaded_action)
