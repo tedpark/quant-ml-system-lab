@@ -94,6 +94,7 @@ Artifacts:
 - CVaR sizing report
 - RL sizing comparison report
 - forward-HMM + SAC sizing report
+- pair RL strategy candidate report
 
 ## Current RL Lab
 
@@ -276,6 +277,25 @@ What it intentionally does not include:
 This is the public learning-lab version of the idea: HMM structures the market state, and RL is constrained to risk/sizing decisions.
 
 Production-grade does not mean "profitable" in this public lab. It means the training loop has the control points required before any model could be trusted: deterministic data split, repeated seeds, held-out validation, checkpoint reproducibility, explicit metrics, and documented failure gates.
+
+## Current Strategy Candidate
+
+The first strategy-candidate pipeline is documented in `docs/strategy_candidate.md`.
+
+Run:
+
+```bash
+make pair-rl-strategy
+```
+
+Output:
+
+```text
+reports/pair_rl_strategy.json
+artifacts/strategy_checkpoints/pair_rl_seed_*.pt
+```
+
+This connects baseline signal generation, HMM regime features, SAC sizing, validation gates, checkpointing, and latest signal generation. The output includes `trade_ready`; if gates fail, the strategy can still be studied but should not be treated as paper-trading approved.
 
 ## Monthly Learning Outputs
 
