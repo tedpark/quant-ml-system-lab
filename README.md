@@ -61,6 +61,7 @@ quant-ml-system-lab/
       regime.py
       rl.py
       sac.py
+      torch_sac.py
       risk.py
       serving.py
       sizing.py
@@ -99,6 +100,7 @@ make experiment-demo
 make latency-benchmark
 make q-learning-gridworld
 make sac-bandit
+make torch-sac
 make all-reports
 ```
 
@@ -115,6 +117,7 @@ reports/cvar_sizing.json
 reports/rl_sizing_comparison.json
 reports/q_learning_gridworld.json
 reports/sac_bandit.json
+reports/torch_sac_quadratic.json
 ```
 
 The generated report is intentionally not committed because it is an execution artifact.
@@ -182,3 +185,4 @@ See also:
 - Dockerfile and CI workflow: implemented
 - RL fundamentals lab: implemented
 - SAC concept lab: implemented
+- PyTorch SAC learning lab: implemented

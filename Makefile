@@ -1,4 +1,4 @@
-.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit monitoring-report experiment-demo latency-benchmark all-reports serve
+.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac monitoring-report experiment-demo latency-benchmark all-reports serve
 
 test:
 	python -m pytest -q
@@ -27,6 +27,9 @@ q-learning-gridworld:
 sac-bandit:
 	python examples/run_sac_bandit.py
 
+torch-sac:
+	python examples/run_torch_sac_quadratic.py
+
 monitoring-report:
 	python examples/run_monitoring_report.py
 
@@ -36,7 +39,7 @@ experiment-demo:
 latency-benchmark:
 	python examples/run_latency_benchmark.py
 
-all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit monitoring-report experiment-demo latency-benchmark
+all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac monitoring-report experiment-demo latency-benchmark
 
 serve:
 	uvicorn quant_ml_lab.api:app --app-dir src --reload

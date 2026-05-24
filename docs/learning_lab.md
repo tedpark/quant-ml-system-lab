@@ -65,9 +65,11 @@ Artifacts:
 
 - `src/quant_ml_lab/rl.py`
 - `src/quant_ml_lab/sac.py`
+- `src/quant_ml_lab/torch_sac.py`
 - `examples/run_q_learning_gridworld.py`
 - `examples/run_sac_bandit.py`
-- future DQN/PPO/neural SAC examples
+- `examples/run_torch_sac_quadratic.py`
+- future DQN/PPO examples
 
 ### Track 4. Financial ML / RL
 
@@ -142,10 +144,39 @@ Why this exists:
 
 Next SAC steps:
 
-1. Add replay buffer and neural actor/critic with PyTorch.
-2. Train on a small continuous-control toy environment.
-3. Add tests for tensor shapes, action bounds, and loss finiteness.
+1. Add automatic entropy temperature tuning.
+2. Add a multi-step continuous-control toy environment.
+3. Add DQN/PPO comparison labs.
 4. Only then connect SAC concepts to sanitized financial sizing examples.
+
+## Current PyTorch SAC Lab
+
+The PyTorch SAC lab trains a tanh-squashed Gaussian actor and twin critics on a tiny quadratic action environment.
+
+Run:
+
+```bash
+python examples/run_torch_sac_quadratic.py
+```
+
+Output:
+
+```text
+reports/torch_sac_quadratic.json
+```
+
+What it demonstrates:
+
+- replay buffer
+- Gaussian actor
+- tanh action squashing
+- log-prob correction
+- twin critics
+- target critics
+- soft target update
+- actor loss and critic loss
+
+This is still not a trading strategy. It is a controlled PyTorch SAC learning lab.
 
 ## Monthly Learning Outputs
 
