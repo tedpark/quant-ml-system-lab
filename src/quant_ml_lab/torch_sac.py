@@ -146,6 +146,11 @@ class TorchSACConfig:
     gamma: float = 0.0
     tau: float = 0.05
     alpha: float = 0.05
+    alpha_init: float = 0.05
+    alpha_lr: float = 3e-3
+    alpha_floor: float = 1e-4
+    target_entropy: float = -1.0
+    automatic_entropy_tuning: bool = True
     actor_lr: float = 3e-3
     critic_lr: float = 3e-3
     hidden_dim: int = 32
@@ -158,6 +163,9 @@ class TorchSACResult:
     reward_trace: list[float]
     actor_loss_trace: list[float]
     critic_loss_trace: list[float]
+    alpha_trace: list[float]
+    alpha_loss_trace: list[float]
+    actor: GaussianActor
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -165,6 +173,8 @@ class TorchSACResult:
             "reward_trace": self.reward_trace,
             "actor_loss_trace": self.actor_loss_trace,
             "critic_loss_trace": self.critic_loss_trace,
+            "alpha_trace": self.alpha_trace,
+            "alpha_loss_trace": self.alpha_loss_trace,
         }
 
 
@@ -173,6 +183,7 @@ def train_torch_sac(
     config: TorchSACConfig | None = None,
 ) -> TorchSACResult:
     cfg = config or TorchSACConfig()
+    _validate_config(cfg)
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng(cfg.seed)
 
@@ -187,11 +198,19 @@ def train_torch_sac(
     actor_opt = torch.optim.Adam(actor.parameters(), lr=cfg.actor_lr)
     q1_opt = torch.optim.Adam(q1.parameters(), lr=cfg.critic_lr)
     q2_opt = torch.optim.Adam(q2.parameters(), lr=cfg.critic_lr)
+    log_alpha = torch.tensor(
+        np.log(cfg.alpha_init),
+        dtype=torch.float32,
+        requires_grad=cfg.automatic_entropy_tuning,
+    )
+    alpha_opt = torch.optim.Adam([log_alpha], lr=cfg.alpha_lr)
     buffer = ReplayBuffer(seed=cfg.seed)
 
     reward_trace: list[float] = []
     actor_loss_trace: list[float] = []
     critic_loss_trace: list[float] = []
+    alpha_trace: list[float] = []
+    alpha_loss_trace: list[float] = []
     state = env.reset()
 
     for step in range(cfg.steps):
@@ -211,6 +230,7 @@ def train_torch_sac(
             continue
 
         states, actions, rewards, next_states, dones = buffer.sample(cfg.batch_size)
+        alpha = _current_alpha(log_alpha, cfg)
         critic_loss = _update_critics(
             actor,
             q1,
@@ -225,14 +245,19 @@ def train_torch_sac(
             next_states,
             dones,
             cfg,
+            alpha,
         )
-        actor_loss = _update_actor(actor, q1, q2, actor_opt, states, cfg.alpha)
+        actor_loss, log_prob = _update_actor(actor, q1, q2, actor_opt, states, alpha)
+        alpha_loss = _update_alpha(alpha_opt, log_alpha, log_prob, cfg)
         _soft_update(target_q1, q1, cfg.tau)
         _soft_update(target_q2, q2, cfg.tau)
         critic_loss_trace.append(critic_loss)
         actor_loss_trace.append(actor_loss)
+        alpha_trace.append(float(_current_alpha(log_alpha, cfg).detach().item()))
+        alpha_loss_trace.append(alpha_loss)
 
     eval_state = torch.as_tensor(env.reset(), dtype=torch.float32).unsqueeze(0)
+    actor.eval()
     with torch.no_grad():
         deterministic_action = actor.deterministic(eval_state).item()
     return TorchSACResult(
@@ -240,7 +265,31 @@ def train_torch_sac(
         reward_trace=reward_trace,
         actor_loss_trace=actor_loss_trace,
         critic_loss_trace=critic_loss_trace,
+        alpha_trace=alpha_trace,
+        alpha_loss_trace=alpha_loss_trace,
+        actor=actor,
     )
+
+
+def _validate_config(cfg: TorchSACConfig) -> None:
+    if cfg.steps <= 0:
+        raise ValueError("steps must be positive")
+    if cfg.batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+    if cfg.warmup_steps < 0:
+        raise ValueError("warmup_steps must be non-negative")
+    if not 0.0 <= cfg.gamma <= 1.0:
+        raise ValueError("gamma must be in [0, 1]")
+    if not 0.0 < cfg.tau <= 1.0:
+        raise ValueError("tau must be in (0, 1]")
+    if cfg.alpha <= 0.0 or cfg.alpha_init <= 0.0 or cfg.alpha_floor <= 0.0:
+        raise ValueError("alpha values must be positive")
+
+
+def _current_alpha(log_alpha: Tensor, cfg: TorchSACConfig) -> Tensor:
+    if cfg.automatic_entropy_tuning:
+        return log_alpha.exp().clamp_min(cfg.alpha_floor).detach()
+    return torch.tensor(cfg.alpha, dtype=torch.float32)
 
 
 def _update_critics(
@@ -257,11 +306,12 @@ def _update_critics(
     next_states: Tensor,
     dones: Tensor,
     cfg: TorchSACConfig,
+    alpha: Tensor,
 ) -> float:
     with torch.no_grad():
         next_actions, next_log_prob = actor.sample(next_states)
         target_q = torch.min(target_q1(next_states, next_actions), target_q2(next_states, next_actions))
-        target = rewards + cfg.gamma * (1.0 - dones) * (target_q - cfg.alpha * next_log_prob)
+        target = rewards + cfg.gamma * (1.0 - dones) * (target_q - alpha * next_log_prob)
 
     q1_loss = F.mse_loss(q1(states, actions), target)
     q2_loss = F.mse_loss(q2(states, actions), target)
@@ -280,15 +330,32 @@ def _update_actor(
     q2: Critic,
     actor_opt: torch.optim.Optimizer,
     states: Tensor,
-    alpha: float,
-) -> float:
+    alpha: Tensor,
+) -> tuple[float, Tensor]:
     sampled_actions, log_prob = actor.sample(states)
     min_q = torch.min(q1(states, sampled_actions), q2(states, sampled_actions))
     actor_loss = (alpha * log_prob - min_q).mean()
     actor_opt.zero_grad()
     actor_loss.backward()
     actor_opt.step()
-    return float(actor_loss.detach().item())
+    return float(actor_loss.detach().item()), log_prob.detach()
+
+
+def _update_alpha(
+    alpha_opt: torch.optim.Optimizer,
+    log_alpha: Tensor,
+    log_prob: Tensor,
+    cfg: TorchSACConfig,
+) -> float:
+    if not cfg.automatic_entropy_tuning:
+        return 0.0
+    alpha_loss = -(log_alpha * (log_prob + cfg.target_entropy).detach()).mean()
+    alpha_opt.zero_grad()
+    alpha_loss.backward()
+    alpha_opt.step()
+    with torch.no_grad():
+        log_alpha.clamp_(min=float(np.log(cfg.alpha_floor)))
+    return float(alpha_loss.detach().item())
 
 
 def _soft_update(target: nn.Module, source: nn.Module, tau: float) -> None:

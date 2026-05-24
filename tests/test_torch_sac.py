@@ -51,3 +51,26 @@ def test_torch_sac_trains_toward_target_action():
     assert len(result.reward_trace) == 180
     assert result.actor_loss_trace
     assert result.critic_loss_trace
+    assert result.alpha_trace
+    assert result.alpha_loss_trace
+    assert all(np.isfinite(value) for value in result.alpha_trace[-5:])
+    assert min(result.alpha_trace) > 0.0
+
+
+def test_torch_sac_can_use_fixed_alpha():
+    env = QuadraticActionEnv(QuadraticEnvConfig(target_action=0.2))
+    result = train_torch_sac(
+        env,
+        TorchSACConfig(
+            steps=80,
+            warmup_steps=16,
+            batch_size=16,
+            automatic_entropy_tuning=False,
+            alpha=0.03,
+            seed=21,
+        ),
+    )
+
+    assert result.alpha_trace
+    assert set(round(value, 6) for value in result.alpha_trace) == {0.03}
+    assert set(result.alpha_loss_trace) == {0.0}

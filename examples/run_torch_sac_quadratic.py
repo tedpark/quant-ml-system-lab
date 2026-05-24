@@ -21,6 +21,8 @@ def main() -> None:
         "last_10_rewards": result.reward_trace[-10:],
         "last_5_actor_losses": result.actor_loss_trace[-5:],
         "last_5_critic_losses": result.critic_loss_trace[-5:],
+        "last_5_alpha_values": result.alpha_trace[-5:],
+        "last_5_alpha_losses": result.alpha_loss_trace[-5:],
     }
     Path("reports").mkdir(exist_ok=True)
     Path("reports/torch_sac_quadratic.json").write_text(

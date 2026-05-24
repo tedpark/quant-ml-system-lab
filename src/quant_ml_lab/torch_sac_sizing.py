@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+import torch
 
 from quant_ml_lab.torch_sac import TorchSACConfig, train_torch_sac
 from quant_ml_lab.validation import BacktestMetrics, compute_metrics
@@ -110,8 +111,9 @@ def train_hmm_sac_sizer(
     state = eval_env.reset()
     done = False
     while not done:
-        # Public demo: use the learned deterministic action as a stable policy proxy.
-        action = np.array([result.deterministic_action], dtype=np.float32)
+        state_tensor = torch.as_tensor(state, dtype=torch.float32).unsqueeze(0)
+        with torch.no_grad():
+            action = result.actor.deterministic(state_tensor).squeeze(0).numpy().astype(np.float32)
         state, _, done = eval_env.step(action)
 
     output = frame.iloc[: len(eval_env.net_returns)].copy()
