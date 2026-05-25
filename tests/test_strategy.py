@@ -33,6 +33,8 @@ def test_build_pair_rl_strategy_produces_signal_and_gates(tmp_path):
     assert report.regime_behavior.normal.rows + report.regime_behavior.high_vol.rows == len(
         validation_output
     )
+    assert report.regime_behavior.normal.active_rows <= report.regime_behavior.normal.rows
+    assert report.regime_behavior.high_vol.active_rows <= report.regime_behavior.high_vol.rows
     assert report.regime_behavior.learned_regime_response
     assert abs(report.latest_signal.sized_position) <= 1.0
     assert report.latest_signal.leg_a_target == -report.latest_signal.sized_position
@@ -81,3 +83,4 @@ def test_analyze_regime_behavior_detects_defensive_high_vol_response():
     assert report.high_vol.rows > 0
     assert report.normal.rows > 0
     assert report.learned_regime_response == "defensive_sizing_in_high_vol"
+    assert report.active_multiplier_shift_high_minus_normal < 0.0

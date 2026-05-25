@@ -88,6 +88,12 @@ The field `learned_regime_response` classifies the policy as:
 
 This makes the RL behavior auditable. If the policy increases high-volatility exposure, the report should show it directly instead of hiding it behind aggregate Sharpe.
 
+Important distinction:
+
+- `mean_sac_abs_position` can increase simply because the baseline signal is active more often in that regime.
+- `mean_active_multiplier` is the better measure of whether SAC itself changed sizing when a baseline position existed.
+- A strategy should not claim regime-specific learning unless the active multiplier shift is economically meaningful and robust across splits.
+
 ## Public Boundary
 
 This pipeline deliberately excludes:

@@ -51,10 +51,13 @@ class PairRLSignal:
 class RegimeBehaviorSummary:
     regime: str
     rows: int
+    active_rows: int
     mean_high_vol_prob: float
     mean_baseline_abs_position: float
     mean_sac_abs_position: float
     mean_multiplier: float
+    mean_active_multiplier: float
+    exposure_ratio_to_baseline: float
     mean_net_return: float
     total_return: float
     sharpe: float
@@ -66,10 +69,13 @@ class RegimeBehaviorSummary:
         return {
             "regime": self.regime,
             "rows": self.rows,
+            "active_rows": self.active_rows,
             "mean_high_vol_prob": self.mean_high_vol_prob,
             "mean_baseline_abs_position": self.mean_baseline_abs_position,
             "mean_sac_abs_position": self.mean_sac_abs_position,
             "mean_multiplier": self.mean_multiplier,
+            "mean_active_multiplier": self.mean_active_multiplier,
+            "exposure_ratio_to_baseline": self.exposure_ratio_to_baseline,
             "mean_net_return": self.mean_net_return,
             "total_return": self.total_return,
             "sharpe": self.sharpe,
@@ -86,7 +92,9 @@ class RegimeBehaviorReport:
     high_vol: RegimeBehaviorSummary
     action_shift_high_minus_normal: float
     multiplier_shift_high_minus_normal: float
+    active_multiplier_shift_high_minus_normal: float
     learned_regime_response: str
+    interpretation_warning: str
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -95,7 +103,9 @@ class RegimeBehaviorReport:
             "high_vol": self.high_vol.as_dict(),
             "action_shift_high_minus_normal": self.action_shift_high_minus_normal,
             "multiplier_shift_high_minus_normal": self.multiplier_shift_high_minus_normal,
+            "active_multiplier_shift_high_minus_normal": self.active_multiplier_shift_high_minus_normal,
             "learned_regime_response": self.learned_regime_response,
+            "interpretation_warning": self.interpretation_warning,
         }
 
 
@@ -273,14 +283,20 @@ def analyze_regime_behavior(
     high_vol = _summarize_regime("high_vol", frame.loc[high_mask])
     action_shift = high_vol.mean_sac_abs_position - normal.mean_sac_abs_position
     multiplier_shift = high_vol.mean_multiplier - normal.mean_multiplier
-    response = _classify_regime_response(action_shift, multiplier_shift)
+    active_multiplier_shift = high_vol.mean_active_multiplier - normal.mean_active_multiplier
+    response = _classify_regime_response(active_multiplier_shift)
     return RegimeBehaviorReport(
         threshold=high_vol_threshold,
         normal=normal,
         high_vol=high_vol,
         action_shift_high_minus_normal=action_shift,
         multiplier_shift_high_minus_normal=multiplier_shift,
+        active_multiplier_shift_high_minus_normal=active_multiplier_shift,
         learned_regime_response=response,
+        interpretation_warning=(
+            "Absolute exposure can rise only because the baseline signal is active more often. "
+            "Use active_multiplier_shift_high_minus_normal to judge whether SAC itself changed sizing."
+        ),
     )
 
 
@@ -303,10 +319,13 @@ def _summarize_regime(regime: str, frame: pd.DataFrame) -> RegimeBehaviorSummary
         return RegimeBehaviorSummary(
             regime=regime,
             rows=0,
+            active_rows=0,
             mean_high_vol_prob=0.0,
             mean_baseline_abs_position=0.0,
             mean_sac_abs_position=0.0,
             mean_multiplier=0.0,
+            mean_active_multiplier=0.0,
+            exposure_ratio_to_baseline=0.0,
             mean_net_return=0.0,
             total_return=0.0,
             sharpe=0.0,
@@ -315,13 +334,25 @@ def _summarize_regime(regime: str, frame: pd.DataFrame) -> RegimeBehaviorSummary
             trades=0,
         )
     metrics = compute_metrics(frame["sac_net_return"], frame["sac_turnover"])
+    active = frame["baseline_position"].abs() > 0.0
+    active_multiplier = frame.loc[active, "sac_multiplier"]
+    mean_baseline_abs_position = float(frame["baseline_position"].abs().mean())
+    mean_sac_abs_position = float(frame["sac_sized_position"].abs().mean())
+    exposure_ratio = (
+        mean_sac_abs_position / mean_baseline_abs_position
+        if mean_baseline_abs_position > 0.0
+        else 0.0
+    )
     return RegimeBehaviorSummary(
         regime=regime,
         rows=len(frame),
+        active_rows=int(active.sum()),
         mean_high_vol_prob=float(frame["high_vol_prob"].mean()),
-        mean_baseline_abs_position=float(frame["baseline_position"].abs().mean()),
-        mean_sac_abs_position=float(frame["sac_sized_position"].abs().mean()),
+        mean_baseline_abs_position=mean_baseline_abs_position,
+        mean_sac_abs_position=mean_sac_abs_position,
         mean_multiplier=float(frame["sac_multiplier"].mean()),
+        mean_active_multiplier=float(active_multiplier.mean()) if len(active_multiplier) else 0.0,
+        exposure_ratio_to_baseline=exposure_ratio,
         mean_net_return=float(frame["sac_net_return"].mean()),
         total_return=metrics.total_return,
         sharpe=metrics.sharpe,
@@ -331,11 +362,11 @@ def _summarize_regime(regime: str, frame: pd.DataFrame) -> RegimeBehaviorSummary
     )
 
 
-def _classify_regime_response(action_shift: float, multiplier_shift: float) -> str:
+def _classify_regime_response(active_multiplier_shift: float) -> str:
     tolerance = 0.02
-    if action_shift < -tolerance and multiplier_shift < -tolerance:
+    if active_multiplier_shift < -tolerance:
         return "defensive_sizing_in_high_vol"
-    if action_shift > tolerance and multiplier_shift > tolerance:
+    if active_multiplier_shift > tolerance:
         return "aggressive_sizing_in_high_vol"
     return "neutral_or_mixed_sizing"
 
