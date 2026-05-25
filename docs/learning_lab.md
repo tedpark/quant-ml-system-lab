@@ -95,6 +95,7 @@ Artifacts:
 - RL sizing comparison report
 - forward-HMM + SAC sizing report
 - pair RL strategy candidate report
+- RL trading research notes
 
 ## Current RL Lab
 
@@ -306,6 +307,14 @@ make pair-rl-strategy-walk-forward
 ```
 
 The walk-forward report is the stricter check. A single split can be useful for iteration, but paper-trading approval should eventually require robust walk-forward gates.
+
+Research diagnosis:
+
+```text
+docs/rl_trading_research_notes.md
+```
+
+Current conclusion: the present SAC multiplier environment is useful as a scaffold, but the next architecture should move toward RL as a regime-aware meta-controller and risk allocator.
 
 ## Monthly Learning Outputs
 

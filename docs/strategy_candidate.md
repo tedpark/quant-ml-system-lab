@@ -16,6 +16,8 @@ pair mean reversion signal
 
 It is a research strategy candidate, not a live trading system.
 
+For the research diagnosis and next architecture direction, see `docs/rl_trading_research_notes.md`.
+
 ## What It Does
 
 - Builds a baseline pair mean-reversion signal.
@@ -122,6 +124,14 @@ The single split can pass `trade_ready`, but that is not enough. The walk-forwar
 - majority of positive Sharpe-delta folds
 
 The latest local walk-forward result is not robust-ready. It reduced losses versus baseline across folds, but Sharpe improvement was not consistent.
+
+Current decision:
+
+```text
+Do not treat this as a live strategy.
+Keep it as a research scaffold.
+Move toward RL meta-control and stronger walk-forward validation.
+```
 
 ## Public Boundary
 
