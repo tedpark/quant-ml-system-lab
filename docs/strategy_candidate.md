@@ -27,6 +27,7 @@ It is a research strategy candidate, not a live trading system.
 - Saves the selected policy checkpoint.
 - Emits a latest target pair signal.
 - Marks the signal as approved only if infrastructure and risk gates pass.
+- Reports regime-conditioned policy behavior.
 
 ## Command
 
@@ -57,6 +58,35 @@ Risk gates:
 - validation Sharpe beats the baseline when required
 
 If any required gate fails, `trade_ready` is false and the latest signal is not approved for paper trading.
+
+## Regime Behavior Analysis
+
+The strategy report includes a `regime_behavior` section. It answers the question:
+
+```text
+Did the learned policy behave differently in normal and high-volatility regimes?
+```
+
+The report compares:
+
+- rows by regime
+- mean HMM high-volatility probability
+- mean baseline absolute position
+- mean SAC absolute position
+- mean SAC multiplier
+- regime-specific return
+- regime-specific Sharpe
+- regime-specific drawdown
+- regime-specific turnover
+- regime-specific trade count
+
+The field `learned_regime_response` classifies the policy as:
+
+- `defensive_sizing_in_high_vol`
+- `aggressive_sizing_in_high_vol`
+- `neutral_or_mixed_sizing`
+
+This makes the RL behavior auditable. If the policy increases high-volatility exposure, the report should show it directly instead of hiding it behind aggregate Sharpe.
 
 ## Public Boundary
 

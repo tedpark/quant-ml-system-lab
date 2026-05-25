@@ -31,6 +31,20 @@ Latest run summary:
 - Strategy max drawdown: -0.03564709099961416
 - Drawdown delta: 0.0357550997290782
 - `trade_ready`: true
+- Learned regime response: `aggressive_sizing_in_high_vol`
+
+Regime behavior:
+
+| regime | rows | mean_high_vol_prob | mean_sac_abs_position | total_return | sharpe | max_drawdown | trades |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| normal | 40 | 0.03532591365515776 | 0.3019430189335253 | -0.030739827311168977 | -2.069416450883833 | -0.05006033067001314 | 27 |
+| high_vol | 46 | 0.9603616153996503 | 0.4532663151723049 | 0.039113154507111725 | 2.0692775020019494 | -0.031196437151460477 | 41 |
+
+Regime interpretation:
+
+- High-volatility rows had higher average SAC exposure than normal rows.
+- In this synthetic run, high-volatility rows produced better return and Sharpe.
+- The learned behavior is therefore classified as aggressive high-volatility sizing, not defensive sizing.
 
 Latest signal:
 

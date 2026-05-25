@@ -48,6 +48,58 @@ class PairRLSignal:
 
 
 @dataclass(frozen=True)
+class RegimeBehaviorSummary:
+    regime: str
+    rows: int
+    mean_high_vol_prob: float
+    mean_baseline_abs_position: float
+    mean_sac_abs_position: float
+    mean_multiplier: float
+    mean_net_return: float
+    total_return: float
+    sharpe: float
+    max_drawdown: float
+    turnover: float
+    trades: int
+
+    def as_dict(self) -> dict[str, float | int | str]:
+        return {
+            "regime": self.regime,
+            "rows": self.rows,
+            "mean_high_vol_prob": self.mean_high_vol_prob,
+            "mean_baseline_abs_position": self.mean_baseline_abs_position,
+            "mean_sac_abs_position": self.mean_sac_abs_position,
+            "mean_multiplier": self.mean_multiplier,
+            "mean_net_return": self.mean_net_return,
+            "total_return": self.total_return,
+            "sharpe": self.sharpe,
+            "max_drawdown": self.max_drawdown,
+            "turnover": self.turnover,
+            "trades": self.trades,
+        }
+
+
+@dataclass(frozen=True)
+class RegimeBehaviorReport:
+    threshold: float
+    normal: RegimeBehaviorSummary
+    high_vol: RegimeBehaviorSummary
+    action_shift_high_minus_normal: float
+    multiplier_shift_high_minus_normal: float
+    learned_regime_response: str
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "threshold": self.threshold,
+            "normal": self.normal.as_dict(),
+            "high_vol": self.high_vol.as_dict(),
+            "action_shift_high_minus_normal": self.action_shift_high_minus_normal,
+            "multiplier_shift_high_minus_normal": self.multiplier_shift_high_minus_normal,
+            "learned_regime_response": self.learned_regime_response,
+        }
+
+
+@dataclass(frozen=True)
 class PairRLStrategyReport:
     strategy_name: str
     disclosure: str
@@ -58,6 +110,7 @@ class PairRLStrategyReport:
     benchmark_comparison: dict[str, float]
     infrastructure_gates: dict[str, bool]
     risk_gates: dict[str, bool]
+    regime_behavior: RegimeBehaviorReport
     trade_ready: bool
     latest_signal: PairRLSignal
 
@@ -72,6 +125,7 @@ class PairRLStrategyReport:
             "benchmark_comparison": self.benchmark_comparison,
             "infrastructure_gates": self.infrastructure_gates,
             "risk_gates": self.risk_gates,
+            "regime_behavior": self.regime_behavior.as_dict(),
             "trade_ready": self.trade_ready,
             "latest_signal": self.latest_signal.as_dict(),
         }
@@ -167,6 +221,7 @@ def build_pair_rl_strategy(
         ),
     }
     trade_ready = all(infrastructure_gates.values()) and all(risk_gates.values())
+    regime_behavior = analyze_regime_behavior(best_validation_output)
     latest_signal = _latest_pair_signal(
         best_validation_output,
         approved_for_paper_trading=trade_ready,
@@ -184,10 +239,49 @@ def build_pair_rl_strategy(
         benchmark_comparison=benchmark_comparison,
         infrastructure_gates=infrastructure_gates,
         risk_gates=risk_gates,
+        regime_behavior=regime_behavior,
         trade_ready=trade_ready,
         latest_signal=latest_signal,
     )
     return strategy_report, best_validation_output
+
+
+def analyze_regime_behavior(
+    validation_output: pd.DataFrame,
+    high_vol_threshold: float = 0.5,
+) -> RegimeBehaviorReport:
+    required = {
+        "baseline_position",
+        "sac_sized_position",
+        "sac_net_return",
+        "high_vol_prob",
+    }
+    missing = required.difference(validation_output.columns)
+    if missing:
+        raise ValueError(f"missing columns: {sorted(missing)}")
+
+    frame = validation_output.copy()
+    frame["sac_multiplier"] = (
+        frame["sac_sized_position"].abs()
+        / frame["baseline_position"].abs().replace(0.0, np.nan)
+    ).fillna(0.0)
+    frame["sac_turnover"] = (
+        frame["sac_sized_position"].diff().abs().fillna(frame["sac_sized_position"].abs())
+    )
+    high_mask = frame["high_vol_prob"] >= high_vol_threshold
+    normal = _summarize_regime("normal", frame.loc[~high_mask])
+    high_vol = _summarize_regime("high_vol", frame.loc[high_mask])
+    action_shift = high_vol.mean_sac_abs_position - normal.mean_sac_abs_position
+    multiplier_shift = high_vol.mean_multiplier - normal.mean_multiplier
+    response = _classify_regime_response(action_shift, multiplier_shift)
+    return RegimeBehaviorReport(
+        threshold=high_vol_threshold,
+        normal=normal,
+        high_vol=high_vol,
+        action_shift_high_minus_normal=action_shift,
+        multiplier_shift_high_minus_normal=multiplier_shift,
+        learned_regime_response=response,
+    )
 
 
 def _validate_strategy_input(prices: pd.DataFrame, cfg: PairRLStrategyConfig) -> None:
@@ -202,6 +296,48 @@ def _validate_strategy_input(prices: pd.DataFrame, cfg: PairRLStrategyConfig) ->
         raise ValueError("rl_train_fraction must be between 0.2 and 0.9")
     if not cfg.seeds:
         raise ValueError("at least one seed is required")
+
+
+def _summarize_regime(regime: str, frame: pd.DataFrame) -> RegimeBehaviorSummary:
+    if frame.empty:
+        return RegimeBehaviorSummary(
+            regime=regime,
+            rows=0,
+            mean_high_vol_prob=0.0,
+            mean_baseline_abs_position=0.0,
+            mean_sac_abs_position=0.0,
+            mean_multiplier=0.0,
+            mean_net_return=0.0,
+            total_return=0.0,
+            sharpe=0.0,
+            max_drawdown=0.0,
+            turnover=0.0,
+            trades=0,
+        )
+    metrics = compute_metrics(frame["sac_net_return"], frame["sac_turnover"])
+    return RegimeBehaviorSummary(
+        regime=regime,
+        rows=len(frame),
+        mean_high_vol_prob=float(frame["high_vol_prob"].mean()),
+        mean_baseline_abs_position=float(frame["baseline_position"].abs().mean()),
+        mean_sac_abs_position=float(frame["sac_sized_position"].abs().mean()),
+        mean_multiplier=float(frame["sac_multiplier"].mean()),
+        mean_net_return=float(frame["sac_net_return"].mean()),
+        total_return=metrics.total_return,
+        sharpe=metrics.sharpe,
+        max_drawdown=metrics.max_drawdown,
+        turnover=metrics.turnover,
+        trades=metrics.trades,
+    )
+
+
+def _classify_regime_response(action_shift: float, multiplier_shift: float) -> str:
+    tolerance = 0.02
+    if action_shift < -tolerance and multiplier_shift < -tolerance:
+        return "defensive_sizing_in_high_vol"
+    if action_shift > tolerance and multiplier_shift > tolerance:
+        return "aggressive_sizing_in_high_vol"
+    return "neutral_or_mixed_sizing"
 
 
 def _split_rl_frame(frame: pd.DataFrame, train_fraction: float) -> tuple[pd.DataFrame, pd.DataFrame]:
