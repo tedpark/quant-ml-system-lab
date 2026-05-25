@@ -17,6 +17,7 @@ def test_build_pair_rl_strategy_produces_signal_and_gates(tmp_path):
             min_validation_rows=30,
             checkpoint_dir=str(tmp_path),
             require_baseline_outperformance=False,
+            require_regime_response=False,
         ),
         sac_config=TorchSACConfig(
             steps=90,
@@ -61,6 +62,7 @@ def test_analyze_regime_behavior_detects_defensive_high_vol_response():
             seeds=(3,),
             min_validation_rows=30,
             require_baseline_outperformance=False,
+            require_regime_response=False,
         ),
         sac_config=TorchSACConfig(
             steps=80,

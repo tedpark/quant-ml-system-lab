@@ -19,8 +19,8 @@ def test_hmm_sac_sizing_env_step_shapes():
     state = env.reset()
     next_state, reward, done = env.step(np.array([0.0], dtype=np.float32))
 
-    assert state.shape == (4,)
-    assert next_state.shape == (4,)
+    assert state.shape == (len(dataset.feature_columns),)
+    assert next_state.shape == (len(dataset.feature_columns),)
     assert isinstance(reward, float)
     assert done is False
 

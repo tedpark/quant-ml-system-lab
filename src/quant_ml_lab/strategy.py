@@ -22,6 +22,8 @@ class PairRLStrategyConfig:
     max_validation_drawdown: float = -0.20
     min_trades: int = 3
     require_baseline_outperformance: bool = True
+    require_regime_response: bool = True
+    min_abs_active_multiplier_shift: float = 0.03
     checkpoint_dir: str = "artifacts/strategy_checkpoints"
 
 
@@ -163,7 +165,8 @@ def build_pair_rl_strategy(
     env_cfg = env_config or HMMSizingEnvConfig(
         transaction_cost_bps=bt_cfg.transaction_cost_bps,
         turnover_penalty=0.0007,
-        high_vol_penalty=0.001,
+        high_vol_penalty=0.002,
+        drawdown_penalty=0.004,
     )
 
     base_train, base_test = train_test_split_time(prices, cfg.train_fraction)
@@ -221,6 +224,7 @@ def build_pair_rl_strategy(
         "best_checkpoint_exists": Path(str(best_run["checkpoint_path"])).exists(),
         "position_bounds_ok": bool(best_validation_output["sac_sized_position"].abs().max() <= 1.0),
     }
+    regime_behavior = analyze_regime_behavior(best_validation_output)
     risk_gates = {
         "drawdown_within_limit": best_metrics.max_drawdown >= cfg.max_validation_drawdown,
         "has_enough_trades": best_metrics.trades >= cfg.min_trades,
@@ -229,9 +233,14 @@ def build_pair_rl_strategy(
             if cfg.require_baseline_outperformance
             else True
         ),
+        "regime_response_if_required": (
+            abs(regime_behavior.active_multiplier_shift_high_minus_normal)
+            >= cfg.min_abs_active_multiplier_shift
+            if cfg.require_regime_response
+            else True
+        ),
     }
     trade_ready = all(infrastructure_gates.values()) and all(risk_gates.values())
-    regime_behavior = analyze_regime_behavior(best_validation_output)
     latest_signal = _latest_pair_signal(
         best_validation_output,
         approved_for_paper_trading=trade_ready,
@@ -312,6 +321,8 @@ def _validate_strategy_input(prices: pd.DataFrame, cfg: PairRLStrategyConfig) ->
         raise ValueError("rl_train_fraction must be between 0.2 and 0.9")
     if not cfg.seeds:
         raise ValueError("at least one seed is required")
+    if cfg.min_abs_active_multiplier_shift < 0.0:
+        raise ValueError("min_abs_active_multiplier_shift must be non-negative")
 
 
 def _summarize_regime(regime: str, frame: pd.DataFrame) -> RegimeBehaviorSummary:

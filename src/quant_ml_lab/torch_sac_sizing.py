@@ -21,6 +21,7 @@ class HMMSizingEnvConfig:
     transaction_cost_bps: float = 2.0
     turnover_penalty: float = 0.0005
     high_vol_penalty: float = 0.001
+    drawdown_penalty: float = 0.002
     max_steps: int | None = None
 
 
@@ -43,6 +44,8 @@ class HMMSACPositionSizingEnv:
         self.config = config or HMMSizingEnvConfig()
         self.cursor = 0
         self.prev_position = 0.0
+        self.equity = 1.0
+        self.peak_equity = 1.0
         self.net_returns: list[float] = []
         self.positions: list[float] = []
 
@@ -57,6 +60,8 @@ class HMMSACPositionSizingEnv:
     def reset(self) -> np.ndarray:
         self.cursor = 0
         self.prev_position = 0.0
+        self.equity = 1.0
+        self.peak_equity = 1.0
         self.net_returns = []
         self.positions = []
         return self._state()
@@ -71,11 +76,22 @@ class HMMSACPositionSizingEnv:
         gross_return = sized_position * -spread_return_next
         turnover = abs(sized_position - self.prev_position)
         cost = turnover * (self.config.transaction_cost_bps / 10_000.0)
+        net_return = gross_return - cost
+        next_equity = self.equity * (1.0 + net_return)
+        next_peak = max(self.peak_equity, next_equity)
+        drawdown = max(0.0, 1.0 - next_equity / next_peak)
         risk_penalty = float(row["high_vol_prob"]) * abs(sized_position) * self.config.high_vol_penalty
-        reward = gross_return - cost - turnover * self.config.turnover_penalty - risk_penalty
+        reward = (
+            net_return
+            - turnover * self.config.turnover_penalty
+            - risk_penalty
+            - drawdown * self.config.drawdown_penalty
+        )
 
         self.prev_position = sized_position
-        self.net_returns.append(gross_return - cost)
+        self.equity = next_equity
+        self.peak_equity = next_peak
+        self.net_returns.append(net_return)
         self.positions.append(sized_position)
         self.cursor += 1
 

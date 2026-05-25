@@ -297,7 +297,7 @@ artifacts/strategy_checkpoints/pair_rl_seed_*.pt
 
 This connects baseline signal generation, HMM regime features, SAC sizing, validation gates, checkpointing, and latest signal generation. The output includes `trade_ready`; if gates fail, the strategy can still be studied but should not be treated as paper-trading approved.
 
-The strategy report also includes regime-conditioned policy behavior, so the lab can inspect whether SAC learned defensive, aggressive, or neutral sizing in high-volatility regimes.
+The strategy report also includes regime-conditioned policy behavior, so the lab can inspect whether SAC learned defensive, aggressive, or neutral sizing in high-volatility regimes. The current public state includes HMM probability, regime transition, spread momentum, spread volatility, recent baseline PnL, and baseline drawdown so the actor has more context than a raw signal-strength overlay.
 
 ## Monthly Learning Outputs
 

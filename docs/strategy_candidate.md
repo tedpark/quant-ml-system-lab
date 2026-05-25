@@ -22,6 +22,8 @@ It is a research strategy candidate, not a live trading system.
 - Fits HMM emission parameters only on the training split.
 - Uses forward-only regime probabilities on later data.
 - Trains SAC only as a risk/sizing overlay.
+- Provides richer RL state features: z-score, HMM probability, regime transition, baseline position, spread momentum, spread volatility, recent baseline PnL, and baseline drawdown.
+- Penalizes turnover, high-volatility exposure, and drawdown in the public reward.
 - Runs multiple seeds.
 - Selects the best validation policy by validation Sharpe.
 - Saves the selected policy checkpoint.
@@ -56,6 +58,7 @@ Risk gates:
 - validation drawdown is within the configured limit
 - validation trade count is sufficient
 - validation Sharpe beats the baseline when required
+- regime response is large enough when required
 
 If any required gate fails, `trade_ready` is false and the latest signal is not approved for paper trading.
 
@@ -93,6 +96,8 @@ Important distinction:
 - `mean_sac_abs_position` can increase simply because the baseline signal is active more often in that regime.
 - `mean_active_multiplier` is the better measure of whether SAC itself changed sizing when a baseline position existed.
 - A strategy should not claim regime-specific learning unless the active multiplier shift is economically meaningful and robust across splits.
+
+The current public gate requires a minimum absolute active multiplier shift before treating the policy as regime-responsive.
 
 ## Public Boundary
 

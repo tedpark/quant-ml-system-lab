@@ -22,11 +22,28 @@ def test_hmm_rl_dataset_contains_features():
 
     dataset = build_hmm_rl_dataset(train, test)
 
-    assert dataset.feature_columns == (
+    assert dataset.feature_columns[:4] == (
         "feature_zscore",
         "feature_abs_zscore",
         "feature_high_vol_prob",
+        "feature_regime_transition",
+    )
+    assert dataset.feature_columns[4:] == (
         "feature_position",
+        "feature_spread_momentum",
+        "feature_spread_volatility",
+        "feature_recent_pnl",
+        "feature_baseline_drawdown",
     )
     assert set(dataset.feature_columns).issubset(dataset.frame.columns)
     assert dataset.frame["high_vol_prob"].between(0.0, 1.0).all()
+    assert dataset.frame[list(dataset.feature_columns)].notna().all().all()
+    assert dataset.frame[
+        [
+            "feature_abs_zscore",
+            "feature_high_vol_prob",
+            "feature_regime_transition",
+            "feature_spread_volatility",
+            "feature_baseline_drawdown",
+        ]
+    ].isin([float("inf"), float("-inf")]).sum().sum() == 0

@@ -101,18 +101,45 @@ def build_hmm_rl_dataset(
 
     frame = test_result.join(probs)
     frame["abs_zscore"] = frame["zscore"].abs().clip(0.0, 4.0)
+    frame["spread_return"] = frame["spread"].diff().fillna(0.0)
     frame["spread_return_next"] = frame["spread"].diff().shift(-1).fillna(0.0)
     frame["baseline_position"] = frame["position"].astype(float)
     frame["baseline_turnover"] = frame["position"].diff().abs().fillna(frame["position"].abs())
+    frame["baseline_net_return"] = frame["position"].shift(1).fillna(0.0) * -frame[
+        "spread_return"
+    ] - frame["baseline_turnover"] * (bt_cfg.transaction_cost_bps / 10_000.0)
+    baseline_equity = (1.0 + frame["baseline_net_return"]).cumprod()
+    baseline_drawdown = (baseline_equity / baseline_equity.cummax() - 1.0).fillna(0.0)
+    train_vol_median = float(train_vol.replace(0.0, np.nan).median())
+    if not np.isfinite(train_vol_median) or train_vol_median <= 0.0:
+        train_vol_median = 1.0
+
     frame["feature_zscore"] = (frame["zscore"].clip(-4.0, 4.0) / 4.0).fillna(0.0)
     frame["feature_abs_zscore"] = (frame["abs_zscore"] / 4.0).fillna(0.0)
     frame["feature_high_vol_prob"] = frame["high_vol_prob"].fillna(0.5)
+    frame["feature_regime_transition"] = frame["high_vol_prob"].diff().abs().clip(0.0, 1.0).fillna(0.0)
     frame["feature_position"] = frame["baseline_position"].fillna(0.0)
+    frame["feature_spread_momentum"] = (
+        frame["spread_return"].rolling(5).mean().fillna(0.0).clip(-0.03, 0.03) / 0.03
+    )
+    frame["feature_spread_volatility"] = (
+        (test_vol / train_vol_median).replace([np.inf, -np.inf], 0.0).fillna(0.0).clip(0.0, 3.0)
+        / 3.0
+    )
+    frame["feature_recent_pnl"] = (
+        frame["baseline_net_return"].rolling(5).mean().fillna(0.0).clip(-0.02, 0.02) / 0.02
+    )
+    frame["feature_baseline_drawdown"] = baseline_drawdown.clip(-0.25, 0.0).abs() / 0.25
 
     feature_columns = (
         "feature_zscore",
         "feature_abs_zscore",
         "feature_high_vol_prob",
+        "feature_regime_transition",
         "feature_position",
+        "feature_spread_momentum",
+        "feature_spread_volatility",
+        "feature_recent_pnl",
+        "feature_baseline_drawdown",
     )
     return HMMRLDataset(frame=frame, feature_columns=feature_columns)
