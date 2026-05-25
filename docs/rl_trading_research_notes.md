@@ -2,6 +2,12 @@
 
 This note documents the current conclusion after testing the public HMM + SAC strategy candidate and reviewing related research.
 
+For the deeper failure analysis and redesign decision, see:
+
+```text
+docs/rl_trading_failure_analysis.md
+```
+
 ## Current Conclusion
 
 The current structure should not be treated as a finished trading strategy.
