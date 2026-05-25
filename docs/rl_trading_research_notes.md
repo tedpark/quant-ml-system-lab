@@ -252,6 +252,51 @@ Interpretation:
 - Drawdown control improved, but return quality did not.
 - The next research task is to learn this selector under strict walk-forward and offline-RL safety gates.
 
+## Learned Selector Scaffold
+
+The first learned selector is implemented as a DQN-style discrete meta-controller:
+
+```text
+src/quant_ml_lab/strategy_selector_dqn.py
+```
+
+Run:
+
+```bash
+make strategy-selector-dqn-demo
+```
+
+Output:
+
+```text
+reports/strategy_selector_dqn_demo.json
+artifacts/strategy_checkpoints/strategy_selector_dqn.pt
+```
+
+The learned selector action space is the same public candidate family:
+
+- `no_trade`
+- `mean_reversion_full`
+- `mean_reversion_low_risk`
+- `volatility_defensive`
+- `cvar_defensive`
+
+Single-split demo result:
+
+- DQN validation total return: `-0.0007502419429273877`
+- rule-based validation total return: `-0.016180094534256173`
+- DQN validation Sharpe: `-0.024163421476573885`
+- rule-based validation Sharpe: `-0.6856862476669808`
+- DQN validation max drawdown: `-0.0580629834875529`
+- rule-based validation max drawdown: `-0.0556060554082175`
+
+Interpretation:
+
+- The DQN selector can now be trained, evaluated, checkpointed, and compared against the rule-based selector.
+- The current demo is a single split, not robust evidence.
+- The learned policy mostly selected `mean_reversion_full`, so this is not yet strong regime-aware behavior.
+- Walk-forward, seed stability, random-selector baseline, and cost stress are required next.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

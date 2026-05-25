@@ -70,6 +70,19 @@ Output:
 reports/strategy_selector_demo.json
 ```
 
+Learned DQN selector scaffold:
+
+```bash
+make strategy-selector-dqn-demo
+```
+
+Output:
+
+```text
+reports/strategy_selector_dqn_demo.json
+artifacts/strategy_checkpoints/strategy_selector_dqn.pt
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -172,6 +185,14 @@ state -> strategy choice + risk budget
 ```
 
 The learned version must beat both the individual candidates and the rule-based selector under walk-forward validation before it should be treated as a stronger result.
+
+The first learned selector scaffold is `src/quant_ml_lab/strategy_selector_dqn.py`. It trains a DQN-style discrete policy over the same candidate family.
+
+Current interpretation:
+
+- It proves that a learned selector can be trained, evaluated, and checkpointed.
+- It is still a single-split scaffold.
+- It should not be treated as robust until walk-forward, seed stability, random selector, and transaction-cost stress reports are added.
 
 ## Public Boundary
 

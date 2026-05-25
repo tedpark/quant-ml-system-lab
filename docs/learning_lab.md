@@ -69,12 +69,14 @@ Artifacts:
 - `src/quant_ml_lab/hmm_rl.py`
 - `src/quant_ml_lab/torch_sac_sizing.py`
 - `src/quant_ml_lab/strategy_selector.py`
+- `src/quant_ml_lab/strategy_selector_dqn.py`
 - `examples/run_q_learning_gridworld.py`
 - `examples/run_sac_bandit.py`
 - `examples/run_torch_sac_quadratic.py`
 - `examples/run_hmm_sac_sizing.py`
 - `examples/run_hmm_sac_training_validation.py`
 - `examples/run_strategy_selector_demo.py`
+- `examples/run_strategy_selector_dqn_demo.py`
 - future DQN/PPO examples
 
 ### Track 4. Financial ML / RL
@@ -98,6 +100,7 @@ Artifacts:
 - forward-HMM + SAC sizing report
 - pair RL strategy candidate report
 - strategy selector demo report
+- strategy selector DQN demo report
 - RL trading research notes
 
 ## Current RL Lab
@@ -358,6 +361,43 @@ This creates the module boundary for the future learned selector:
 ```text
 state -> strategy choice + risk budget
 ```
+
+## Current DQN Strategy Selector
+
+The DQN strategy selector is the first learned policy for the meta-controller interface.
+
+Run:
+
+```bash
+make strategy-selector-dqn-demo
+```
+
+Output:
+
+```text
+reports/strategy_selector_dqn_demo.json
+docs/benchmark_reports/strategy_selector_dqn_demo.md
+artifacts/strategy_checkpoints/strategy_selector_dqn.pt
+```
+
+What it demonstrates:
+
+- discrete action space over strategy candidates
+- DQN replay buffer
+- target network
+- epsilon-greedy exploration
+- held-out validation split
+- rule-based selector comparison
+- checkpoint writing
+
+What it does not prove yet:
+
+- robust regime learning
+- live strategy readiness
+- stable performance across seeds
+- stable performance across walk-forward folds
+
+The next required artifact is a walk-forward DQN selector report.
 
 ## Monthly Learning Outputs
 
