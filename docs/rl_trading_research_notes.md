@@ -302,6 +302,53 @@ Interpretation:
 - The action concentration is close to the current gate, so one-action collapse remains a real risk.
 - Walk-forward, seed stability, random-selector baseline, and cost stress are required next.
 
+## SAC Allocator Scaffold
+
+The SAC-only allocator is implemented as:
+
+```text
+src/quant_ml_lab/strategy_selector_sac.py
+```
+
+Run:
+
+```bash
+make strategy-allocator-sac-demo
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_demo.json
+artifacts/strategy_checkpoints/strategy_allocator_sac.pt
+```
+
+This structure is a better fit for continuous risk allocation:
+
+```text
+state
+-> continuous SAC action
+-> softmax strategy weights
+-> weighted position
+```
+
+Single-split demo result:
+
+- SAC validation total return: `-0.01970259896837645`
+- rule-based validation total return: `-0.016180094534256173`
+- SAC validation Sharpe: `-0.9180280393066089`
+- rule-based validation Sharpe: `-0.6856862476669808`
+- SAC validation max drawdown: `-0.05414547018742388`
+- rule-based validation max drawdown: `-0.0556060554082175`
+- SAC validation weight concentration: `0.21261754789544707`
+
+Interpretation:
+
+- SAC is the preferred architecture for risk budget and allocation.
+- This first SAC allocator does not yet beat the rule-based selector.
+- It did avoid one-action collapse by spreading weight across candidate strategies.
+- Next work should focus on walk-forward SAC, multi-seed stability, and reward ablation.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

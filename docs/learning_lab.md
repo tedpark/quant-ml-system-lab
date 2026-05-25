@@ -70,6 +70,7 @@ Artifacts:
 - `src/quant_ml_lab/torch_sac_sizing.py`
 - `src/quant_ml_lab/strategy_selector.py`
 - `src/quant_ml_lab/strategy_selector_dqn.py`
+- `src/quant_ml_lab/strategy_selector_sac.py`
 - `examples/run_q_learning_gridworld.py`
 - `examples/run_sac_bandit.py`
 - `examples/run_torch_sac_quadratic.py`
@@ -77,6 +78,7 @@ Artifacts:
 - `examples/run_hmm_sac_training_validation.py`
 - `examples/run_strategy_selector_demo.py`
 - `examples/run_strategy_selector_dqn_demo.py`
+- `examples/run_strategy_allocator_sac_demo.py`
 - future DQN/PPO examples
 
 ### Track 4. Financial ML / RL
@@ -101,6 +103,7 @@ Artifacts:
 - pair RL strategy candidate report
 - strategy selector demo report
 - strategy selector DQN demo report
+- strategy allocator SAC demo report
 - RL trading research notes
 
 ## Current RL Lab
@@ -402,6 +405,39 @@ What it does not prove yet:
 - stable performance across walk-forward folds
 
 The next required artifact is a walk-forward DQN selector report.
+
+## Current SAC Strategy Allocator
+
+The SAC strategy allocator is the preferred path for continuous risk budgeting.
+
+Run:
+
+```bash
+make strategy-allocator-sac-demo
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_demo.json
+docs/benchmark_reports/strategy_allocator_sac_demo.md
+artifacts/strategy_checkpoints/strategy_allocator_sac.pt
+```
+
+What it demonstrates:
+
+- continuous SAC action over the strategy family
+- softmax strategy weights
+- weighted position construction
+- actor, critic, alpha diagnostics
+- rule-based selector comparison
+- individual candidate baselines
+- checkpoint writing
+
+Current limitation:
+
+- the first single-split SAC allocator does not beat the rule-based selector yet
+- it should be improved through walk-forward validation, multi-seed checks, and reward ablations
 
 ## Monthly Learning Outputs
 

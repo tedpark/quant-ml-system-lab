@@ -83,6 +83,19 @@ reports/strategy_selector_dqn_demo.json
 artifacts/strategy_checkpoints/strategy_selector_dqn.pt
 ```
 
+SAC continuous allocator scaffold:
+
+```bash
+make strategy-allocator-sac-demo
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_demo.json
+artifacts/strategy_checkpoints/strategy_allocator_sac.pt
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -194,6 +207,8 @@ Current interpretation:
 - It reports loss traces, reward traces, Q-value traces, random baseline comparison, candidate baselines, and action concentration.
 - It is still a single-split scaffold.
 - It should not be treated as robust until walk-forward, seed stability, random selector, and transaction-cost stress reports are added.
+
+The SAC allocator is the preferred direction for continuous risk budgeting. It maps a continuous SAC action to softmax weights over the strategy family. The first demo does not beat the rule-based selector yet, but it avoids one-action collapse and gives a better module boundary for risk allocation.
 
 ## Public Boundary
 

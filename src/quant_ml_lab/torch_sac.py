@@ -167,7 +167,7 @@ class TorchSACConfig:
 
 @dataclass(frozen=True)
 class TorchSACResult:
-    deterministic_action: float
+    deterministic_action: float | list[float]
     reward_trace: list[float]
     actor_loss_trace: list[float]
     critic_loss_trace: list[float]
@@ -274,7 +274,12 @@ def train_torch_sac(
     eval_state = torch.as_tensor(env.reset(), dtype=torch.float32, device=device).unsqueeze(0)
     actor.eval()
     with torch.no_grad():
-        deterministic_action = actor.deterministic(eval_state).item()
+        deterministic_array = actor.deterministic(eval_state).squeeze(0).cpu().numpy()
+        deterministic_action = (
+            float(deterministic_array.item())
+            if deterministic_array.size == 1
+            else [float(value) for value in deterministic_array]
+        )
     actor.cpu()
     return TorchSACResult(
         deterministic_action=deterministic_action,
