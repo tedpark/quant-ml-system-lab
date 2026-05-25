@@ -11,6 +11,7 @@ from quant_ml_lab.hmm_rl import build_hmm_rl_dataset
 from quant_ml_lab.torch_sac import TorchSACConfig
 from quant_ml_lab.torch_sac_sizing import HMMSizingEnvConfig, train_validate_hmm_sac_sizer
 from quant_ml_lab.validation import BacktestConfig, BacktestMetrics, compute_metrics
+from quant_ml_lab.walk_forward import WalkForwardConfig, iter_walk_forward_splits
 
 
 @dataclass(frozen=True)
@@ -143,6 +144,52 @@ class PairRLStrategyReport:
         }
 
 
+@dataclass(frozen=True)
+class PairRLWalkForwardFold:
+    fold: int
+    train_start: str
+    train_end: str
+    validation_start: str
+    validation_end: str
+    baseline_validation: BacktestMetrics
+    strategy_validation: BacktestMetrics
+    benchmark_comparison: dict[str, float]
+    trade_ready: bool
+    learned_regime_response: str
+    active_multiplier_shift_high_minus_normal: float
+    latest_signal: PairRLSignal
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "fold": self.fold,
+            "train_start": self.train_start,
+            "train_end": self.train_end,
+            "validation_start": self.validation_start,
+            "validation_end": self.validation_end,
+            "baseline_validation": self.baseline_validation.as_dict(),
+            "strategy_validation": self.strategy_validation.as_dict(),
+            "benchmark_comparison": self.benchmark_comparison,
+            "trade_ready": self.trade_ready,
+            "learned_regime_response": self.learned_regime_response,
+            "active_multiplier_shift_high_minus_normal": (
+                self.active_multiplier_shift_high_minus_normal
+            ),
+            "latest_signal": self.latest_signal.as_dict(),
+        }
+
+
+@dataclass(frozen=True)
+class PairRLWalkForwardReport:
+    folds: tuple[PairRLWalkForwardFold, ...]
+    summary: dict[str, float | int]
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "summary": self.summary,
+            "folds": [fold.as_dict() for fold in self.folds],
+        }
+
+
 def build_pair_rl_strategy(
     prices: pd.DataFrame,
     config: PairRLStrategyConfig | None = None,
@@ -265,6 +312,55 @@ def build_pair_rl_strategy(
     return strategy_report, best_validation_output
 
 
+def run_pair_rl_strategy_walk_forward(
+    prices: pd.DataFrame,
+    wf_config: WalkForwardConfig | None = None,
+    strategy_config: PairRLStrategyConfig | None = None,
+    backtest_config: BacktestConfig | None = None,
+    sac_config: TorchSACConfig | None = None,
+    env_config: HMMSizingEnvConfig | None = None,
+) -> PairRLWalkForwardReport:
+    wf_cfg = wf_config or WalkForwardConfig(train_size=360, test_size=160, step_size=160)
+    base_strategy_cfg = strategy_config or PairRLStrategyConfig()
+    folds: list[PairRLWalkForwardFold] = []
+    for fold_idx, (train, test) in enumerate(iter_walk_forward_splits(prices, wf_cfg), start=1):
+        combined = pd.concat([train, test])
+        train_fraction = len(train) / len(combined)
+        fold_strategy_cfg = _strategy_config_for_fold(
+            base_strategy_cfg,
+            fold_idx=fold_idx,
+            train_fraction=train_fraction,
+        )
+        report, validation_output = build_pair_rl_strategy(
+            combined,
+            config=fold_strategy_cfg,
+            backtest_config=backtest_config,
+            sac_config=sac_config,
+            env_config=env_config,
+        )
+        folds.append(
+            PairRLWalkForwardFold(
+                fold=fold_idx,
+                train_start=_index_label(train.index[0]),
+                train_end=_index_label(train.index[-1]),
+                validation_start=_index_label(validation_output.index[0]),
+                validation_end=_index_label(validation_output.index[-1]),
+                baseline_validation=report.baseline_validation,
+                strategy_validation=report.best_validation,
+                benchmark_comparison=report.benchmark_comparison,
+                trade_ready=report.trade_ready,
+                learned_regime_response=report.regime_behavior.learned_regime_response,
+                active_multiplier_shift_high_minus_normal=(
+                    report.regime_behavior.active_multiplier_shift_high_minus_normal
+                ),
+                latest_signal=report.latest_signal,
+            )
+        )
+    if not folds:
+        raise ValueError("no walk-forward folds were produced")
+    return PairRLWalkForwardReport(folds=tuple(folds), summary=_summarize_strategy_folds(folds))
+
+
 def analyze_regime_behavior(
     validation_output: pd.DataFrame,
     high_vol_threshold: float = 0.5,
@@ -323,6 +419,70 @@ def _validate_strategy_input(prices: pd.DataFrame, cfg: PairRLStrategyConfig) ->
         raise ValueError("at least one seed is required")
     if cfg.min_abs_active_multiplier_shift < 0.0:
         raise ValueError("min_abs_active_multiplier_shift must be non-negative")
+
+
+def _strategy_config_for_fold(
+    config: PairRLStrategyConfig,
+    fold_idx: int,
+    train_fraction: float,
+) -> PairRLStrategyConfig:
+    return PairRLStrategyConfig(
+        train_fraction=train_fraction,
+        rl_train_fraction=config.rl_train_fraction,
+        seeds=config.seeds,
+        min_validation_rows=config.min_validation_rows,
+        max_validation_drawdown=config.max_validation_drawdown,
+        min_trades=config.min_trades,
+        require_baseline_outperformance=config.require_baseline_outperformance,
+        require_regime_response=config.require_regime_response,
+        min_abs_active_multiplier_shift=config.min_abs_active_multiplier_shift,
+        checkpoint_dir=f"{config.checkpoint_dir}/walk_forward_fold_{fold_idx}",
+    )
+
+
+def _summarize_strategy_folds(
+    folds: list[PairRLWalkForwardFold],
+) -> dict[str, float | int]:
+    returns = pd.Series([fold.strategy_validation.total_return for fold in folds], dtype=float)
+    sharpes = pd.Series([fold.strategy_validation.sharpe for fold in folds], dtype=float)
+    drawdowns = pd.Series([fold.strategy_validation.max_drawdown for fold in folds], dtype=float)
+    return_deltas = pd.Series(
+        [fold.benchmark_comparison["total_return_minus_baseline"] for fold in folds],
+        dtype=float,
+    )
+    sharpe_deltas = pd.Series(
+        [fold.benchmark_comparison["sharpe_minus_baseline"] for fold in folds],
+        dtype=float,
+    )
+    active_shifts = pd.Series(
+        [fold.active_multiplier_shift_high_minus_normal for fold in folds],
+        dtype=float,
+    )
+    ready = pd.Series([fold.trade_ready for fold in folds], dtype=bool)
+    gates = {
+        "trade_ready_rate_ok": float(ready.mean()) >= 0.5,
+        "mean_sharpe_delta_positive": float(sharpe_deltas.mean()) > 0.0,
+        "mean_total_return_delta_positive": float(return_deltas.mean()) > 0.0,
+        "positive_return_delta_majority": int((return_deltas > 0.0).sum()) > len(folds) / 2,
+        "positive_sharpe_delta_majority": int((sharpe_deltas > 0.0).sum()) > len(folds) / 2,
+    }
+    return {
+        "folds": len(folds),
+        "trade_ready_folds": int(ready.sum()),
+        "trade_ready_rate": float(ready.mean()),
+        "mean_total_return": float(returns.mean()),
+        "mean_sharpe": float(sharpes.mean()),
+        "worst_max_drawdown": float(drawdowns.min()),
+        "mean_total_return_delta": float(return_deltas.mean()),
+        "mean_sharpe_delta": float(sharpe_deltas.mean()),
+        "positive_return_delta_folds": int((return_deltas > 0.0).sum()),
+        "positive_sharpe_delta_folds": int((sharpe_deltas > 0.0).sum()),
+        "mean_active_multiplier_shift": float(active_shifts.mean()),
+        "robustness_gates_passed": int(sum(gates.values())),
+        "robustness_gates_total": len(gates),
+        "robust_ready": int(all(gates.values())),
+        **gates,
+    }
 
 
 def _summarize_regime(regime: str, frame: pd.DataFrame) -> RegimeBehaviorSummary:
@@ -439,3 +599,9 @@ def _with_seed(config: TorchSACConfig, seed: int) -> TorchSACConfig:
         replay_capacity=config.replay_capacity,
         device=config.device,
     )
+
+
+def _index_label(value: object) -> str:
+    if hasattr(value, "date"):
+        return str(value.date())
+    return str(value)

@@ -13,3 +13,4 @@ reports/*.jsonl
 reports/*.csv
 artifacts/rl_checkpoints/*.pt
 artifacts/strategy_checkpoints/*.pt
+artifacts/strategy_checkpoints/**/*.pt

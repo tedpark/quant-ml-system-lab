@@ -3,8 +3,10 @@ from quant_ml_lab.strategy import (
     PairRLStrategyConfig,
     analyze_regime_behavior,
     build_pair_rl_strategy,
+    run_pair_rl_strategy_walk_forward,
 )
 from quant_ml_lab.torch_sac import TorchSACConfig
+from quant_ml_lab.walk_forward import WalkForwardConfig
 
 
 def test_build_pair_rl_strategy_produces_signal_and_gates(tmp_path):
@@ -86,3 +88,33 @@ def test_analyze_regime_behavior_detects_defensive_high_vol_response():
     assert report.normal.rows > 0
     assert report.learned_regime_response == "defensive_sizing_in_high_vol"
     assert report.active_multiplier_shift_high_minus_normal < 0.0
+
+
+def test_run_pair_rl_strategy_walk_forward_returns_summary(tmp_path):
+    prices = make_synthetic_pair(SyntheticPairConfig(periods=520, seed=22))
+
+    report = run_pair_rl_strategy_walk_forward(
+        prices,
+        wf_config=WalkForwardConfig(train_size=260, test_size=120, step_size=120),
+        strategy_config=PairRLStrategyConfig(
+            seeds=(3,),
+            min_validation_rows=30,
+            checkpoint_dir=str(tmp_path),
+            require_baseline_outperformance=False,
+            require_regime_response=False,
+        ),
+        sac_config=TorchSACConfig(
+            steps=80,
+            warmup_steps=16,
+            batch_size=16,
+            hidden_dim=16,
+            seed=3,
+        ),
+    )
+
+    assert report.summary["folds"] == len(report.folds)
+    assert len(report.folds) >= 1
+    assert "mean_sharpe_delta" in report.summary
+    assert "robust_ready" in report.summary
+    assert "trade_ready_rate_ok" in report.summary
+    assert report.folds[0].latest_signal.date

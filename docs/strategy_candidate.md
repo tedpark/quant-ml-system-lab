@@ -44,6 +44,18 @@ reports/pair_rl_strategy.json
 artifacts/strategy_checkpoints/pair_rl_seed_*.pt
 ```
 
+Walk-forward robustness check:
+
+```bash
+make pair-rl-strategy-walk-forward
+```
+
+Output:
+
+```text
+reports/pair_rl_strategy_walk_forward.json
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -98,6 +110,18 @@ Important distinction:
 - A strategy should not claim regime-specific learning unless the active multiplier shift is economically meaningful and robust across splits.
 
 The current public gate requires a minimum absolute active multiplier shift before treating the policy as regime-responsive.
+
+## Robustness Status
+
+The single split can pass `trade_ready`, but that is not enough. The walk-forward report includes separate robustness gates:
+
+- trade-ready rate across folds
+- mean Sharpe delta
+- mean total return delta
+- majority of positive return-delta folds
+- majority of positive Sharpe-delta folds
+
+The latest local walk-forward result is not robust-ready. It reduced losses versus baseline across folds, but Sharpe improvement was not consistent.
 
 ## Public Boundary
 

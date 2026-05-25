@@ -299,6 +299,14 @@ This connects baseline signal generation, HMM regime features, SAC sizing, valid
 
 The strategy report also includes regime-conditioned policy behavior, so the lab can inspect whether SAC learned defensive, aggressive, or neutral sizing in high-volatility regimes. The current public state includes HMM probability, regime transition, spread momentum, spread volatility, recent baseline PnL, and baseline drawdown so the actor has more context than a raw signal-strength overlay.
 
+Run the walk-forward robustness check:
+
+```bash
+make pair-rl-strategy-walk-forward
+```
+
+The walk-forward report is the stricter check. A single split can be useful for iteration, but paper-trading approval should eventually require robust walk-forward gates.
+
 ## Monthly Learning Outputs
 
 Each month should produce at least one of:
