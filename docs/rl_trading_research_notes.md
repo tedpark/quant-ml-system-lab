@@ -185,6 +185,73 @@ Rules:
   execution, hard risk limits, kill switch, compliance constraints
 ```
 
+## Implemented Scaffold
+
+The first module for the recommended architecture is now implemented as a public, rule-based scaffold:
+
+```text
+src/quant_ml_lab/strategy_selector.py
+```
+
+It separates the strategy family from the selector:
+
+```text
+HMM/SAC research frame
+-> candidate strategy family
+-> regime-aware selector
+-> selected position, selected return, selected equity
+-> metrics and selection audit
+```
+
+The current candidate family is:
+
+- `no_trade`
+- `mean_reversion_full`
+- `mean_reversion_low_risk`
+- `volatility_defensive`
+- `cvar_defensive`
+
+Run:
+
+```bash
+make strategy-selector-demo
+```
+
+Output:
+
+```text
+reports/strategy_selector_demo.json
+```
+
+Important boundary:
+
+```text
+This is not yet a learned RL meta-controller.
+It is the modular interface that a learned selector can replace later.
+```
+
+The current selector intentionally uses transparent public rules:
+
+- no-trade when the baseline is inactive
+- lower-risk mean reversion in normal conditions
+- volatility defensive policy when high-volatility probability is high
+- CVaR/drawdown defensive policy when baseline drawdown is elevated
+
+The demo result reduced max drawdown versus the baseline, but did not improve Sharpe:
+
+- baseline total return: `-0.008486678752498311`
+- selected total return: `-0.020134249591297726`
+- baseline Sharpe: `-0.04672005285178897`
+- selected Sharpe: `-0.2738501462822829`
+- baseline max drawdown: `-0.11935204698174917`
+- selected max drawdown: `-0.04317433598481957`
+
+Interpretation:
+
+- The selector is behaving as a risk allocator, not an alpha engine.
+- Drawdown control improved, but return quality did not.
+- The next research task is to learn this selector under strict walk-forward and offline-RL safety gates.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

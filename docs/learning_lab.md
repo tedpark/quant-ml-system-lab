@@ -68,11 +68,13 @@ Artifacts:
 - `src/quant_ml_lab/torch_sac.py`
 - `src/quant_ml_lab/hmm_rl.py`
 - `src/quant_ml_lab/torch_sac_sizing.py`
+- `src/quant_ml_lab/strategy_selector.py`
 - `examples/run_q_learning_gridworld.py`
 - `examples/run_sac_bandit.py`
 - `examples/run_torch_sac_quadratic.py`
 - `examples/run_hmm_sac_sizing.py`
 - `examples/run_hmm_sac_training_validation.py`
+- `examples/run_strategy_selector_demo.py`
 - future DQN/PPO examples
 
 ### Track 4. Financial ML / RL
@@ -95,6 +97,7 @@ Artifacts:
 - RL sizing comparison report
 - forward-HMM + SAC sizing report
 - pair RL strategy candidate report
+- strategy selector demo report
 - RL trading research notes
 
 ## Current RL Lab
@@ -315,6 +318,46 @@ docs/rl_trading_research_notes.md
 ```
 
 Current conclusion: the present SAC multiplier environment is useful as a scaffold, but the next architecture should move toward RL as a regime-aware meta-controller and risk allocator.
+
+## Current Strategy Selector Scaffold
+
+The strategy selector scaffold is the first module for that next architecture.
+
+Run:
+
+```bash
+make strategy-selector-demo
+```
+
+Output:
+
+```text
+reports/strategy_selector_demo.json
+docs/benchmark_reports/strategy_selector_demo.md
+```
+
+What it demonstrates:
+
+- candidate strategy family construction
+- no-trade policy
+- low-risk mean-reversion policy
+- volatility defensive policy
+- CVaR/drawdown defensive policy
+- regime-aware selection audit
+- selected-position metrics
+
+What it does not claim:
+
+- live trading readiness
+- private alpha
+- learned RL meta-control
+- robust profitability
+
+This creates the module boundary for the future learned selector:
+
+```text
+state -> strategy choice + risk budget
+```
 
 ## Monthly Learning Outputs
 

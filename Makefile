@@ -1,4 +1,4 @@
-.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward monitoring-report experiment-demo latency-benchmark all-reports serve
+.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo monitoring-report experiment-demo latency-benchmark all-reports serve
 
 test:
 	python -m pytest -q
@@ -42,6 +42,9 @@ pair-rl-strategy:
 pair-rl-strategy-walk-forward:
 	python examples/run_pair_rl_strategy_walk_forward.py
 
+strategy-selector-demo:
+	python examples/run_strategy_selector_demo.py
+
 monitoring-report:
 	python examples/run_monitoring_report.py
 
@@ -51,7 +54,7 @@ experiment-demo:
 latency-benchmark:
 	python examples/run_latency_benchmark.py
 
-all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward monitoring-report experiment-demo latency-benchmark
+all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo monitoring-report experiment-demo latency-benchmark
 
 serve:
 	uvicorn quant_ml_lab.api:app --app-dir src --reload

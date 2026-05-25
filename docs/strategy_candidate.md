@@ -58,6 +58,18 @@ Output:
 reports/pair_rl_strategy_walk_forward.json
 ```
 
+Regime-aware strategy selector scaffold:
+
+```bash
+make strategy-selector-demo
+```
+
+Output:
+
+```text
+reports/strategy_selector_demo.json
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -132,6 +144,34 @@ Do not treat this as a live strategy.
 Keep it as a research scaffold.
 Move toward RL meta-control and stronger walk-forward validation.
 ```
+
+## Meta-Controller Scaffold
+
+The next architecture is now represented by `src/quant_ml_lab/strategy_selector.py`.
+
+Instead of asking SAC to directly solve the whole trading problem, the scaffold separates:
+
+- candidate strategy construction
+- regime-aware selection
+- risk budget assignment
+- selected-position backtest metrics
+- selection counts for auditability
+
+The public candidate family is:
+
+- `no_trade`
+- `mean_reversion_full`
+- `mean_reversion_low_risk`
+- `volatility_defensive`
+- `cvar_defensive`
+
+The current selector is deliberately rule-based. Its purpose is to create the module contract for a future learned RL selector:
+
+```text
+state -> strategy choice + risk budget
+```
+
+The learned version must beat both the individual candidates and the rule-based selector under walk-forward validation before it should be treated as a stronger result.
 
 ## Public Boundary
 
