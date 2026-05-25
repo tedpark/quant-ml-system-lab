@@ -386,7 +386,11 @@ What it demonstrates:
 - DQN replay buffer
 - target network
 - epsilon-greedy exploration
+- loss, reward, and Q-value traces
+- action concentration diagnostics
 - held-out validation split
+- random selector baseline
+- individual candidate baselines
 - rule-based selector comparison
 - checkpoint writing
 

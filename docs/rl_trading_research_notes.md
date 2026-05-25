@@ -289,12 +289,17 @@ Single-split demo result:
 - rule-based validation Sharpe: `-0.6856862476669808`
 - DQN validation max drawdown: `-0.0580629834875529`
 - rule-based validation max drawdown: `-0.0556060554082175`
+- random validation Sharpe: `-1.5893581968590802`
+- DQN loss tail mean: `2.0426711434993193e-05`
+- DQN q-value tail absolute mean: `0.02748905373737216`
+- DQN validation action concentration: `0.8275862068965517`
 
 Interpretation:
 
 - The DQN selector can now be trained, evaluated, checkpointed, and compared against the rule-based selector.
 - The current demo is a single split, not robust evidence.
 - The learned policy mostly selected `mean_reversion_full`, so this is not yet strong regime-aware behavior.
+- The action concentration is close to the current gate, so one-action collapse remains a real risk.
 - Walk-forward, seed stability, random-selector baseline, and cost stress are required next.
 
 ## Recommended Roadmap

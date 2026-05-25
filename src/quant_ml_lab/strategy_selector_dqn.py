@@ -43,6 +43,8 @@ class DQNSelectorConfig:
     turnover_penalty: float = 0.0005
     high_vol_penalty: float = 0.001
     drawdown_penalty: float = 0.002
+    max_action_concentration: float = 0.85
+    max_q_abs_mean: float = 2.0
     seed: int = 17
     device: str = "cpu"
 
@@ -52,11 +54,24 @@ class DQNSelectorTrainingReport:
     train_metrics: dict[str, float | int]
     validation_metrics: dict[str, float | int]
     rule_based_validation_metrics: dict[str, float | int]
+    random_validation_metrics: dict[str, float | int]
+    candidate_validation_metrics: dict[str, dict[str, float | int]]
     validation_selection_counts: dict[str, int]
     rule_based_selection_counts: dict[str, int]
+    random_selection_counts: dict[str, int]
+    train_action_counts: dict[str, int]
     mean_train_reward_tail: float
     final_epsilon: float
+    reward_trace_head: list[float]
+    reward_trace_tail: list[float]
     loss_tail_mean: float
+    loss_trace_head: list[float]
+    loss_trace_tail: list[float]
+    q_value_tail_mean: float
+    q_value_tail_abs_mean: float
+    q_value_trace_tail: list[float]
+    validation_action_concentration: float
+    diagnostics: dict[str, bool | float]
     checkpoint_path: str | None
     disclosure: str = (
         "Public DQN strategy-selector scaffold. Synthetic data only. Not a live strategy."
@@ -67,11 +82,24 @@ class DQNSelectorTrainingReport:
             "train_metrics": self.train_metrics,
             "validation_metrics": self.validation_metrics,
             "rule_based_validation_metrics": self.rule_based_validation_metrics,
+            "random_validation_metrics": self.random_validation_metrics,
+            "candidate_validation_metrics": self.candidate_validation_metrics,
             "validation_selection_counts": self.validation_selection_counts,
             "rule_based_selection_counts": self.rule_based_selection_counts,
+            "random_selection_counts": self.random_selection_counts,
+            "train_action_counts": self.train_action_counts,
             "mean_train_reward_tail": self.mean_train_reward_tail,
             "final_epsilon": self.final_epsilon,
+            "reward_trace_head": self.reward_trace_head,
+            "reward_trace_tail": self.reward_trace_tail,
             "loss_tail_mean": self.loss_tail_mean,
+            "loss_trace_head": self.loss_trace_head,
+            "loss_trace_tail": self.loss_trace_tail,
+            "q_value_tail_mean": self.q_value_tail_mean,
+            "q_value_tail_abs_mean": self.q_value_tail_abs_mean,
+            "q_value_trace_tail": self.q_value_trace_tail,
+            "validation_action_concentration": self.validation_action_concentration,
+            "diagnostics": self.diagnostics,
             "checkpoint_path": self.checkpoint_path,
             "disclosure": self.disclosure,
         }
@@ -231,6 +259,8 @@ def train_validate_strategy_selector_dqn(
     buffer = DQNReplayBuffer(dqn_cfg.replay_capacity, dqn_cfg.seed)
     reward_trace: list[float] = []
     loss_trace: list[float] = []
+    q_value_trace: list[float] = []
+    train_action_counts = {name: 0 for name in DEFAULT_STRATEGY_ACTIONS}
     update_count = 0
     total_steps = max(1, dqn_cfg.episodes * len(train_frame))
 
@@ -241,9 +271,11 @@ def train_validate_strategy_selector_dqn(
             action = int(rng.integers(0, env.action_dim))
         else:
             action = _greedy_action(q_net, state, device)
+        train_action_counts[DEFAULT_STRATEGY_ACTIONS[action]] += 1
         next_state, reward, done = env.step(action)
         buffer.push(state, action, reward, next_state, done)
         reward_trace.append(reward)
+        q_value_trace.append(_state_q_mean(q_net, state, device))
         state = env.reset() if done else next_state
 
         if len(buffer) >= dqn_cfg.batch_size:
@@ -269,6 +301,12 @@ def train_validate_strategy_selector_dqn(
         selector_cfg,
     )
     _, rule_validation_report = run_strategy_selector(validation_frame, selector_cfg)
+    _, random_validation_report = evaluate_random_strategy_selector(
+        validation_frame,
+        validation_candidates,
+        selector_cfg,
+        seed=dqn_cfg.seed,
+    )
     saved_path: str | None = None
     if checkpoint_path is not None:
         path = Path(checkpoint_path)
@@ -284,15 +322,48 @@ def train_validate_strategy_selector_dqn(
         )
         saved_path = str(path)
 
+    validation_action_concentration = _action_concentration(validation_report.selected_counts)
+    q_value_tail_abs_mean = float(np.mean(np.abs(q_value_trace[-50:]))) if q_value_trace else 0.0
+    loss_tail_mean = float(np.mean(loss_trace[-50:])) if loss_trace else 0.0
+    diagnostics = {
+        "loss_is_finite": bool(np.isfinite(loss_tail_mean)),
+        "q_values_are_bounded": q_value_tail_abs_mean <= dqn_cfg.max_q_abs_mean,
+        "validation_not_single_action": (
+            validation_action_concentration <= dqn_cfg.max_action_concentration
+        ),
+        "beats_random_sharpe": (
+            validation_report.selected_metrics.sharpe
+            >= random_validation_report.selected_metrics.sharpe
+        ),
+        "beats_rule_based_sharpe": (
+            validation_report.selected_metrics.sharpe
+            >= rule_validation_report.selected_metrics.sharpe
+        ),
+        "validation_action_concentration": validation_action_concentration,
+        "q_value_tail_abs_mean": q_value_tail_abs_mean,
+    }
     report = DQNSelectorTrainingReport(
         train_metrics=train_report.selected_metrics.as_dict(),
         validation_metrics=validation_report.selected_metrics.as_dict(),
         rule_based_validation_metrics=rule_validation_report.selected_metrics.as_dict(),
+        random_validation_metrics=random_validation_report.selected_metrics.as_dict(),
+        candidate_validation_metrics=validation_report.candidate_metrics,
         validation_selection_counts=validation_report.selected_counts,
         rule_based_selection_counts=rule_validation_report.selected_counts,
+        random_selection_counts=random_validation_report.selected_counts,
+        train_action_counts={str(key): int(value) for key, value in train_action_counts.items()},
         mean_train_reward_tail=float(np.mean(reward_trace[-50:])) if reward_trace else 0.0,
         final_epsilon=_epsilon_at_step(total_steps - 1, total_steps, dqn_cfg),
-        loss_tail_mean=float(np.mean(loss_trace[-50:])) if loss_trace else 0.0,
+        reward_trace_head=[float(value) for value in reward_trace[:10]],
+        reward_trace_tail=[float(value) for value in reward_trace[-10:]],
+        loss_tail_mean=loss_tail_mean,
+        loss_trace_head=[float(value) for value in loss_trace[:10]],
+        loss_trace_tail=[float(value) for value in loss_trace[-10:]],
+        q_value_tail_mean=float(np.mean(q_value_trace[-50:])) if q_value_trace else 0.0,
+        q_value_tail_abs_mean=q_value_tail_abs_mean,
+        q_value_trace_tail=[float(value) for value in q_value_trace[-10:]],
+        validation_action_concentration=validation_action_concentration,
+        diagnostics=diagnostics,
         checkpoint_path=saved_path,
     )
     return report, train_output, validation_output
@@ -315,6 +386,23 @@ def evaluate_strategy_selector_dqn(
         selected.append(DEFAULT_STRATEGY_ACTIONS[action])
     selected_series = pd.Series(selected, index=frame.index, dtype=object)
     return apply_strategy_selection(frame, candidates, selected_series, selector_cfg)
+
+
+def evaluate_random_strategy_selector(
+    frame: pd.DataFrame,
+    candidates: dict[StrategyName, StrategyCandidate],
+    selector_config: StrategySelectorConfig | None = None,
+    seed: int = 17,
+) -> tuple[pd.DataFrame, StrategySelectionReport]:
+    selector_cfg = selector_config or StrategySelectorConfig()
+    rng = np.random.default_rng(seed)
+    actions = rng.integers(0, len(DEFAULT_STRATEGY_ACTIONS), size=len(frame))
+    selected = pd.Series(
+        [DEFAULT_STRATEGY_ACTIONS[int(action)] for action in actions],
+        index=frame.index,
+        dtype=object,
+    )
+    return apply_strategy_selection(frame, candidates, selected, selector_cfg)
 
 
 def _update_dqn(
@@ -343,6 +431,19 @@ def _greedy_action(q_net: DQNSelectorNetwork, state: np.ndarray, device: torch.d
     with torch.no_grad():
         state_tensor = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
         return int(q_net(state_tensor).argmax(dim=1).item())
+
+
+def _state_q_mean(q_net: DQNSelectorNetwork, state: np.ndarray, device: torch.device) -> float:
+    with torch.no_grad():
+        state_tensor = torch.as_tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+        return float(q_net(state_tensor).mean().detach().cpu().item())
+
+
+def _action_concentration(counts: dict[str, int]) -> float:
+    total = sum(counts.values())
+    if total == 0:
+        return 0.0
+    return max(counts.values()) / total
 
 
 def _epsilon_at_step(step: int, total_steps: int, config: DQNSelectorConfig) -> float:

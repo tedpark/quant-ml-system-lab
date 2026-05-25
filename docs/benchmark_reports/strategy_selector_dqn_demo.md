@@ -56,6 +56,14 @@ Rule-based selector validation metrics:
 - turnover: `5.607587765579333`
 - trades: `17`
 
+Random selector validation metrics:
+
+- total return: `-0.05254006287906887`
+- Sharpe: `-1.5893581968590802`
+- max drawdown: `-0.09927946438334212`
+- turnover: `17.747141774085883`
+- trades: `26`
+
 DQN validation selection counts:
 
 - `mean_reversion_full`: `72`
@@ -69,11 +77,24 @@ Rule-based validation selection counts:
 - `cvar_defensive`: `74`
 - `volatility_defensive`: `13`
 
+Training diagnostics:
+
+- loss tail mean: `2.0426711434993193e-05`
+- q-value tail mean: `0.026724759340286255`
+- q-value tail absolute mean: `0.02748905373737216`
+- validation action concentration: `0.8275862068965517`
+- beats random Sharpe: `true`
+- beats rule-based Sharpe: `true`
+- q-values are bounded: `true`
+- validation is not single-action by the current gate: `true`
+
 ## Interpretation
 
 The DQN selector improved validation return and Sharpe versus the current rule-based selector in this single demo split, but it did so mostly by selecting `mean_reversion_full`. That is not yet robust evidence of regime-aware learning.
 
 The training split Sharpe was much higher than validation Sharpe, so this result must be treated as overfit-prone until walk-forward checks are added.
+
+The validation action concentration is close to the current failure threshold. This means the model is not freely discovering a balanced regime policy yet; it is near a one-action collapse and must be monitored in every future run.
 
 Required next gates:
 

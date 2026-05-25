@@ -191,6 +191,7 @@ The first learned selector scaffold is `src/quant_ml_lab/strategy_selector_dqn.p
 Current interpretation:
 
 - It proves that a learned selector can be trained, evaluated, and checkpointed.
+- It reports loss traces, reward traces, Q-value traces, random baseline comparison, candidate baselines, and action concentration.
 - It is still a single-split scaffold.
 - It should not be treated as robust until walk-forward, seed stability, random selector, and transaction-cost stress reports are added.
 

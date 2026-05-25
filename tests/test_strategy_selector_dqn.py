@@ -48,6 +48,12 @@ def test_train_validate_strategy_selector_dqn_returns_reports(tmp_path: Path):
     assert checkpoint.exists()
     assert report.validation_selection_counts
     assert report.rule_based_selection_counts
+    assert report.random_selection_counts
+    assert report.candidate_validation_metrics
+    assert "loss_is_finite" in report.diagnostics
+    assert report.loss_trace_tail
+    assert report.q_value_trace_tail
+    assert report.validation_action_concentration <= 1.0
     assert "selected_strategy" in train_output.columns
     assert "selected_net_return" in validation_output.columns
     assert report.validation_metrics["trades"] >= 0
