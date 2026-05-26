@@ -409,6 +409,22 @@ Interpretation:
 - The bottleneck is more likely weak state/data coverage and environment realism.
 - Next work should add multi-regime data generation and candidate-level benchmark decomposition before tuning coefficients.
 
+Multi-regime candidate benchmark result:
+
+- cases: `3`
+- mean selected Sharpe: `-0.9164348741317294`
+- mean selected minus best Sharpe: `-0.9164348741317294`
+- worst selected minus best Sharpe: `-1.0888504377611108`
+- selected matches best cases: `0`
+- strongest candidate by mean Sharpe: `no_trade`
+- benchmark-ready: `false`
+
+Interpretation:
+
+- The candidate set itself is weak under multi-regime stress.
+- RL allocation is not the primary issue if no-trade is the strongest candidate.
+- The next redesign should add better supervised/signal candidates and regime-conditioned candidate diagnostics before more SAC tuning.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

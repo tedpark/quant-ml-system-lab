@@ -71,6 +71,7 @@ Artifacts:
 - `src/quant_ml_lab/strategy_selector.py`
 - `src/quant_ml_lab/strategy_selector_dqn.py`
 - `src/quant_ml_lab/strategy_selector_sac.py`
+- `src/quant_ml_lab/strategy_candidate_benchmark.py`
 - `examples/run_q_learning_gridworld.py`
 - `examples/run_sac_bandit.py`
 - `examples/run_torch_sac_quadratic.py`
@@ -78,6 +79,7 @@ Artifacts:
 - `examples/run_hmm_sac_training_validation.py`
 - `examples/run_strategy_selector_demo.py`
 - `examples/run_strategy_selector_dqn_demo.py`
+- `examples/run_strategy_candidate_benchmark.py`
 - `examples/run_strategy_allocator_sac_demo.py`
 - `examples/run_strategy_allocator_sac_walk_forward.py`
 - `examples/run_strategy_allocator_sac_robustness.py`
@@ -106,6 +108,7 @@ Artifacts:
 - pair RL strategy candidate report
 - strategy selector demo report
 - strategy selector DQN demo report
+- strategy candidate benchmark report
 - strategy allocator SAC demo report
 - strategy allocator SAC walk-forward report
 - strategy allocator SAC robustness report
@@ -492,6 +495,33 @@ Current interpretation:
 - SAC remains the preferred allocator architecture.
 - The current data, state, environment, and validation protocol are still too weak for strategy claims.
 - The next learning step is broader data generation, candidate benchmark decomposition, and offline-RL safety gates.
+
+## Current Candidate Benchmark
+
+The candidate benchmark decomposes the public strategy family before asking SAC to allocate across it.
+
+Run:
+
+```bash
+make strategy-candidate-benchmark
+```
+
+Output:
+
+```text
+reports/strategy_candidate_benchmark.json
+docs/benchmark_reports/strategy_candidate_benchmark.md
+```
+
+Current result:
+
+- cases: `3`
+- mean selected Sharpe: `-0.9164348741317294`
+- strongest candidate by mean Sharpe: `no_trade`
+- selected matches best cases: `0`
+- benchmark-ready: `false`
+
+Interpretation: the current candidate set is not strong enough under multi-regime stress. This is a more fundamental blocker than SAC tuning.
 
 ## Monthly Learning Outputs
 

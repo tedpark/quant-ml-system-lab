@@ -83,6 +83,19 @@ reports/strategy_selector_dqn_demo.json
 artifacts/strategy_checkpoints/strategy_selector_dqn.pt
 ```
 
+Candidate benchmark decomposition:
+
+```bash
+make strategy-candidate-benchmark
+```
+
+Output:
+
+```text
+reports/strategy_candidate_benchmark.json
+docs/benchmark_reports/strategy_candidate_benchmark.md
+```
+
 SAC continuous allocator scaffold:
 
 ```bash
@@ -271,6 +284,16 @@ The first reward ablation also fails:
 - robust-ready: `false`
 
 Current interpretation: removing one public penalty at a time barely changes the outcome. The problem is probably not a single reward coefficient. The stronger next move is multi-regime data generation and candidate-level benchmark decomposition.
+
+The first multi-regime candidate benchmark is stricter:
+
+- cases: `3`
+- mean selected Sharpe: `-0.9164348741317294`
+- mean selected minus best Sharpe: `-0.9164348741317294`
+- strongest candidate by mean Sharpe: `no_trade`
+- benchmark-ready: `false`
+
+Current interpretation: the current candidate family is too weak under multi-regime stress. A learned allocator should not be expected to create edge from weak candidates. The next practical redesign is to add stronger candidate signals and benchmark them before more SAC tuning.
 
 ## Public Boundary
 

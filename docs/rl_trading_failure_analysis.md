@@ -38,6 +38,8 @@ The current lab has three relevant RL branches:
 - DQN discrete strategy selector
 - SAC continuous strategy-family allocator
 
+It now also includes a multi-regime synthetic candidate benchmark. That benchmark is important because RL cannot rescue a weak candidate set. If the candidate family itself loses to no-trade across stressed regimes, the allocator has little useful edge to allocate.
+
 ### SAC Position Multiplier
 
 The single split looked acceptable, but walk-forward failed robustness:
@@ -150,6 +152,25 @@ Interpretation:
 - The current state representation and synthetic data coverage are probably too weak to let SAC learn a stable allocator.
 - The next redesign should prioritize broader regime/data generation and stronger baselines before tuning reward coefficients.
 
+### Multi-Regime Candidate Benchmark
+
+The strategy candidate benchmark now evaluates the public candidate family on multi-regime synthetic paths:
+
+- cases: `3`
+- mean selected Sharpe: `-0.9164348741317294`
+- mean selected minus best Sharpe: `-0.9164348741317294`
+- worst selected minus best Sharpe: `-1.0888504377611108`
+- selected matches best cases: `0`
+- strongest candidate by mean Sharpe: `no_trade`
+- benchmark-ready: `false`
+
+Interpretation:
+
+- The current public candidate family is not strong under multi-regime stress.
+- The best candidate is no-trade in all tested cases.
+- This means the allocator is being asked to allocate among weak candidates, which is structurally different from learning a robust trading edge.
+- The next architecture must improve the candidate signal family and data regime diversity before expecting SAC to help.
+
 ## What The Literature Suggests
 
 ### 1. Trading RL Is Mostly Offline RL
@@ -175,6 +196,9 @@ Relevant papers:
 
 - [The Probability of Backtest Overfitting](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253)
 - [Deep Reinforcement Learning for Cryptocurrency Trading: Practical Approach to Address Backtest Overfitting](https://arxiv.org/abs/2209.05559)
+- [All that Glitters Is Not Gold: Comparing Backtest and Out-of-Sample Performance on a Large Cohort of Trading Algorithms](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2745220)
+- [Backtest Overfitting in the Machine Learning Era: A Comparison of Out-of-Sample Testing Methods in a Synthetic Controlled Environment](https://papers.ssrn.com/sol3/Delivery.cfm/4778909.pdf?abstractid=4778909&mirid=1)
+- [Backtesting Trading Strategies with GAN To Avoid Overfitting](https://arxiv.org/abs/2209.04895)
 
 Implication for this repo:
 
@@ -353,12 +377,12 @@ The problem is not algorithm variety. The problem is:
 
 Required artifacts:
 
-- multi-pair synthetic generator
+- multi-regime synthetic generator: first version done
 - walk-forward SAC allocator report: done
 - multi-seed SAC allocator report: first version done
 - transaction-cost stress report: first version done
 - reward ablation report: first version done
-- individual-candidate benchmark report
+- individual-candidate benchmark report: first version done
 
 ### Phase 3. Add Offline RL Safety
 

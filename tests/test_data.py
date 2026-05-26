@@ -1,4 +1,10 @@
-from quant_ml_lab.data import SyntheticPairConfig, make_synthetic_pair, train_test_split_time
+from quant_ml_lab.data import (
+    SyntheticPairConfig,
+    SyntheticRegimePairConfig,
+    make_synthetic_pair,
+    make_synthetic_regime_pair,
+    train_test_split_time,
+)
 
 
 def test_make_synthetic_pair_is_reproducible():
@@ -18,3 +24,12 @@ def test_train_test_split_time_preserves_order():
     assert len(train) == 75
     assert len(test) == 25
     assert train.index.max() < test.index.min()
+
+
+def test_make_synthetic_regime_pair_has_regime_metadata():
+    df = make_synthetic_regime_pair(SyntheticRegimePairConfig(periods=260, seed=31))
+
+    assert len(df) == 260
+    assert {"asset_a", "asset_b", "synthetic_regime"}.issubset(df.columns)
+    assert df["synthetic_regime"].nunique() >= 2
+    assert df[["asset_a", "asset_b"]].gt(0.0).all().all()
