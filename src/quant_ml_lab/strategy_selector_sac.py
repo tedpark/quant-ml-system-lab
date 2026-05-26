@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -123,6 +123,38 @@ class SACAllocatorWalkForwardReport:
         return {
             "summary": self.summary,
             "folds": [fold.as_dict() for fold in self.folds],
+            "disclosure": self.disclosure,
+        }
+
+
+@dataclass(frozen=True)
+class SACAllocatorRobustnessCase:
+    dataset_id: str
+    sac_seed: int
+    transaction_cost_bps: float
+    walk_forward_summary: dict[str, float | int | bool]
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "dataset_id": self.dataset_id,
+            "sac_seed": self.sac_seed,
+            "transaction_cost_bps": self.transaction_cost_bps,
+            "walk_forward_summary": self.walk_forward_summary,
+        }
+
+
+@dataclass(frozen=True)
+class SACAllocatorRobustnessReport:
+    cases: list[SACAllocatorRobustnessCase]
+    summary: dict[str, float | int | bool]
+    disclosure: str = (
+        "Robustness matrix for public SAC allocator. Synthetic data only. Not a live strategy."
+    )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "summary": self.summary,
+            "cases": [case.as_dict() for case in self.cases],
             "disclosure": self.disclosure,
         }
 
@@ -359,6 +391,64 @@ def run_strategy_allocator_sac_walk_forward(
     return SACAllocatorWalkForwardReport(folds=folds, summary=summary)
 
 
+def run_strategy_allocator_sac_robustness_matrix(
+    price_sets: dict[str, pd.DataFrame],
+    sac_seeds: tuple[int, ...] = (61, 62),
+    transaction_cost_bps_values: tuple[float, ...] = (2.0, 5.0),
+    wf_config: WalkForwardConfig | None = None,
+    selector_config: StrategySelectorConfig | None = None,
+    env_config: SACStrategyAllocatorEnvConfig | None = None,
+    sac_config: TorchSACConfig | None = None,
+    rl_train_fraction: float = 0.65,
+) -> SACAllocatorRobustnessReport:
+    if not price_sets:
+        raise ValueError("price_sets must not be empty")
+    if not sac_seeds:
+        raise ValueError("sac_seeds must not be empty")
+    if not transaction_cost_bps_values:
+        raise ValueError("transaction_cost_bps_values must not be empty")
+
+    selector_cfg = selector_config or StrategySelectorConfig()
+    env_cfg = env_config or SACStrategyAllocatorEnvConfig()
+    sac_cfg = sac_config or TorchSACConfig(
+        steps=180,
+        warmup_steps=32,
+        batch_size=32,
+        gamma=0.95,
+        hidden_dim=32,
+        target_entropy=-float(len(SAC_STRATEGY_ACTIONS)),
+    )
+
+    cases: list[SACAllocatorRobustnessCase] = []
+    for dataset_id, prices in price_sets.items():
+        for cost_bps in transaction_cost_bps_values:
+            cost_selector_cfg = replace(selector_cfg, transaction_cost_bps=float(cost_bps))
+            cost_env_cfg = replace(env_cfg, transaction_cost_bps=float(cost_bps))
+            for sac_seed in sac_seeds:
+                seeded_sac_cfg = replace(sac_cfg, seed=int(sac_seed))
+                wf_report = run_strategy_allocator_sac_walk_forward(
+                    prices=prices,
+                    wf_config=wf_config,
+                    selector_config=cost_selector_cfg,
+                    env_config=cost_env_cfg,
+                    sac_config=seeded_sac_cfg,
+                    rl_train_fraction=rl_train_fraction,
+                )
+                cases.append(
+                    SACAllocatorRobustnessCase(
+                        dataset_id=dataset_id,
+                        sac_seed=int(sac_seed),
+                        transaction_cost_bps=float(cost_bps),
+                        walk_forward_summary=wf_report.summary,
+                    )
+                )
+
+    return SACAllocatorRobustnessReport(
+        cases=cases,
+        summary=_summarize_sac_allocator_robustness(cases),
+    )
+
+
 def evaluate_strategy_allocator_sac(
     frame: pd.DataFrame,
     feature_columns: tuple[str, ...],
@@ -464,6 +554,51 @@ def _summarize_sac_allocator_walk_forward(
             positive_sharpe_folds > len(folds) / 2
             and positive_return_folds > len(folds) / 2
             and float(sharpe_delta.mean()) > 0.0
+        ),
+    }
+
+
+def _summarize_sac_allocator_robustness(
+    cases: list[SACAllocatorRobustnessCase],
+) -> dict[str, float | int | bool]:
+    sharpe_delta = pd.Series(
+        [case.walk_forward_summary["mean_sharpe_delta"] for case in cases],
+        dtype=float,
+    )
+    return_delta = pd.Series(
+        [case.walk_forward_summary["mean_total_return_delta"] for case in cases],
+        dtype=float,
+    )
+    robust_flags = pd.Series(
+        [bool(case.walk_forward_summary["robust_ready"]) for case in cases],
+        dtype=bool,
+    )
+    positive_sharpe_cases = int((sharpe_delta > 0.0).sum())
+    positive_return_cases = int((return_delta > 0.0).sum())
+    robust_cases = int(robust_flags.sum())
+    case_count = len(cases)
+    positive_sharpe_rate = positive_sharpe_cases / case_count
+    positive_return_rate = positive_return_cases / case_count
+    robust_case_rate = robust_cases / case_count
+    return {
+        "cases": case_count,
+        "mean_sharpe_delta": float(sharpe_delta.mean()),
+        "median_sharpe_delta": float(sharpe_delta.median()),
+        "worst_sharpe_delta": float(sharpe_delta.min()),
+        "mean_total_return_delta": float(return_delta.mean()),
+        "median_total_return_delta": float(return_delta.median()),
+        "worst_total_return_delta": float(return_delta.min()),
+        "positive_sharpe_cases": positive_sharpe_cases,
+        "positive_sharpe_rate": float(positive_sharpe_rate),
+        "positive_return_cases": positive_return_cases,
+        "positive_return_rate": float(positive_return_rate),
+        "robust_cases": robust_cases,
+        "robust_case_rate": float(robust_case_rate),
+        "robust_ready": bool(
+            robust_case_rate >= 0.75
+            and positive_sharpe_rate >= 0.75
+            and positive_return_rate >= 0.75
+            and float(sharpe_delta.min()) > 0.0
         ),
     }
 

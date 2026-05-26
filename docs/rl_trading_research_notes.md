@@ -371,6 +371,24 @@ Interpretation:
 - The fold consistency is weak.
 - This confirms that the current bottleneck is not only the SAC algorithm; data coverage and validation must improve.
 
+Robustness matrix result:
+
+- cases: `8`
+- mean Sharpe delta: `-0.16407816642347073`
+- median Sharpe delta: `-0.16017712382241217`
+- worst Sharpe delta: `-0.4055403832446698`
+- mean total return delta: `0.0012976537192070092`
+- positive Sharpe case rate: `0.5`
+- positive return case rate: `0.5`
+- robust case rate: `0.0`
+- robust-ready: `false`
+
+Interpretation:
+
+- The allocator is not robust across synthetic data seeds and cost assumptions.
+- The current structure should be treated as a falsification harness, not a strategy.
+- The next improvement should be reward ablation, candidate benchmark decomposition, and broader data generation before adding more RL algorithms.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

@@ -104,6 +104,28 @@ Interpretation:
 - SAC is not robust enough yet.
 - This supports the diagnosis that validation/data coverage is the primary bottleneck.
 
+### SAC Allocator Robustness Matrix
+
+The robustness matrix now repeats the SAC allocator across synthetic data seeds, SAC random seeds, and transaction-cost assumptions:
+
+- cases: `8`
+- mean Sharpe delta: `-0.16407816642347073`
+- median Sharpe delta: `-0.16017712382241217`
+- worst Sharpe delta: `-0.4055403832446698`
+- mean total return delta: `0.0012976537192070092`
+- worst total return delta: `-0.006128065861054743`
+- positive Sharpe case rate: `0.5`
+- positive return case rate: `0.5`
+- robust case rate: `0.0`
+- robust-ready: `false`
+
+Interpretation:
+
+- The allocator sometimes improves total return, but the Sharpe result is not stable.
+- One synthetic data seed is materially worse than the rule-based selector.
+- No case passes the internal walk-forward robustness gate.
+- The current failure mode is consistent with insufficient data diversity and reward/environment mismatch, not with a proven impossibility of RL.
+
 ## What The Literature Suggests
 
 ### 1. Trading RL Is Mostly Offline RL
@@ -157,6 +179,8 @@ Relevant papers:
 
 - [Regime-Based Portfolio Allocation Using Hidden Markov Models and Reinforcement Learning](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5785443)
 - [Reinforcement learning for continuous-time mean-variance portfolio selection in a regime-switching market](https://www.sciencedirect.com/science/article/pii/S0165188923001938)
+- [Dynamic Asset Allocation for Varied Financial Markets under Regime Switching Framework](https://www.sciencedirect.com/science/article/pii/S0377221713002658)
+- [Dynamic Asset Allocation under Market Regime Uncertainty: A Markov Decision Process Approach](https://papers.ssrn.com/sol3/Delivery.cfm/6600759.pdf?abstractid=6600759&mirid=1)
 
 Implication for this repo:
 
@@ -303,9 +327,9 @@ The problem is not algorithm variety. The problem is:
 Required artifacts:
 
 - multi-pair synthetic generator
-- walk-forward SAC allocator report
-- multi-seed SAC allocator report
-- transaction-cost stress report
+- walk-forward SAC allocator report: done
+- multi-seed SAC allocator report: first version done
+- transaction-cost stress report: first version done
 - reward ablation report
 - individual-candidate benchmark report
 

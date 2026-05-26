@@ -108,6 +108,19 @@ Output:
 reports/strategy_allocator_sac_walk_forward.json
 ```
 
+SAC allocator robustness matrix:
+
+```bash
+make strategy-allocator-sac-robustness
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_robustness.json
+docs/benchmark_reports/strategy_allocator_sac_robustness.md
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -223,6 +236,17 @@ Current interpretation:
 The SAC allocator is the preferred direction for continuous risk budgeting. It maps a continuous SAC action to softmax weights over the strategy family. The first demo does not beat the rule-based selector yet, but it avoids one-action collapse and gives a better module boundary for risk allocation.
 
 The first SAC walk-forward report is still not robust-ready. Mean Sharpe delta is slightly positive, but only `1 / 3` folds beat the rule-based selector.
+
+The SAC robustness matrix is stricter and currently fails:
+
+- cases: `8`
+- mean Sharpe delta: `-0.16407816642347073`
+- positive Sharpe case rate: `0.5`
+- positive return case rate: `0.5`
+- robust case rate: `0.0`
+- robust-ready: `false`
+
+Current interpretation: the allocator can sometimes improve total return, but it is not stable enough across data seeds, SAC seeds, and cost assumptions. The right next step is not to add another RL algorithm; it is to improve data diversity, reward ablation, baseline decomposition, and offline-RL safety checks.
 
 ## Public Boundary
 

@@ -8,6 +8,7 @@ from quant_ml_lab.strategy_selector import StrategySelectorConfig, build_strateg
 from quant_ml_lab.strategy_selector_sac import (
     SACStrategyAllocatorEnv,
     SACStrategyAllocatorEnvConfig,
+    run_strategy_allocator_sac_robustness_matrix,
     run_strategy_allocator_sac_walk_forward,
     train_validate_strategy_allocator_sac,
 )
@@ -91,4 +92,33 @@ def test_run_strategy_allocator_sac_walk_forward_returns_summary():
     assert report.folds
     assert report.summary["folds"] == len(report.folds)
     assert "mean_sharpe_delta" in report.summary
+    assert "robust_ready" in report.summary
+
+
+def test_run_strategy_allocator_sac_robustness_matrix_returns_summary():
+    price_sets = {
+        "seed_56": make_synthetic_pair(SyntheticPairConfig(periods=420, seed=56)),
+    }
+
+    report = run_strategy_allocator_sac_robustness_matrix(
+        price_sets=price_sets,
+        sac_seeds=(57, 58),
+        transaction_cost_bps_values=(2.0,),
+        wf_config=WalkForwardConfig(train_size=260, test_size=70, step_size=70),
+        selector_config=StrategySelectorConfig(transaction_cost_bps=2.0),
+        env_config=SACStrategyAllocatorEnvConfig(transaction_cost_bps=2.0),
+        sac_config=TorchSACConfig(
+            steps=40,
+            warmup_steps=12,
+            batch_size=12,
+            gamma=0.9,
+            hidden_dim=16,
+            target_entropy=-5.0,
+            seed=57,
+        ),
+    )
+
+    assert len(report.cases) == 2
+    assert report.summary["cases"] == 2
+    assert "positive_sharpe_rate" in report.summary
     assert "robust_ready" in report.summary

@@ -79,6 +79,8 @@ Artifacts:
 - `examples/run_strategy_selector_demo.py`
 - `examples/run_strategy_selector_dqn_demo.py`
 - `examples/run_strategy_allocator_sac_demo.py`
+- `examples/run_strategy_allocator_sac_walk_forward.py`
+- `examples/run_strategy_allocator_sac_robustness.py`
 - future DQN/PPO examples
 
 ### Track 4. Financial ML / RL
@@ -104,6 +106,8 @@ Artifacts:
 - strategy selector demo report
 - strategy selector DQN demo report
 - strategy allocator SAC demo report
+- strategy allocator SAC walk-forward report
+- strategy allocator SAC robustness report
 - RL trading research notes
 
 ## Current RL Lab
@@ -437,6 +441,19 @@ reports/strategy_allocator_sac_walk_forward.json
 docs/benchmark_reports/strategy_allocator_sac_walk_forward.md
 ```
 
+Robustness matrix:
+
+```bash
+make strategy-allocator-sac-robustness
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_robustness.json
+docs/benchmark_reports/strategy_allocator_sac_robustness.md
+```
+
 What it demonstrates:
 
 - continuous SAC action over the strategy family
@@ -452,6 +469,13 @@ Current limitation:
 - the first single-split SAC allocator does not beat the rule-based selector yet
 - it should be improved through walk-forward validation, multi-seed checks, and reward ablations
 - the first walk-forward report is also not robust-ready, with only `1 / 3` positive Sharpe-delta folds
+- the robustness matrix is also not robust-ready: `8` cases, mean Sharpe delta `-0.16407816642347073`, robust case rate `0.0`
+
+Current interpretation:
+
+- SAC remains the preferred allocator architecture.
+- The current data, reward, and validation protocol are still too weak for strategy claims.
+- The next learning step is broader data generation, reward ablation, and offline-RL safety gates.
 
 ## Monthly Learning Outputs
 
