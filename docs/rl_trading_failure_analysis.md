@@ -84,6 +84,26 @@ Interpretation:
 - It did not learn a stronger validation policy.
 - The likely bottleneck is not the SAC implementation alone; it is data, reward, and validation.
 
+### SAC Allocator Walk-Forward
+
+The walk-forward SAC allocator report now tests whether the SAC allocator survives multiple time windows:
+
+- folds: `3`
+- mean validation Sharpe: `0.6084243033462294`
+- mean rule-based Sharpe: `0.5807367743726034`
+- mean Sharpe delta: `0.027687528973625853`
+- mean total return delta: `0.007387042262560224`
+- positive Sharpe delta folds: `1`
+- positive return delta folds: `1`
+- robust-ready: `false`
+
+Interpretation:
+
+- The mean result is slightly better than the rule-based selector.
+- The fold consistency is poor.
+- SAC is not robust enough yet.
+- This supports the diagnosis that validation/data coverage is the primary bottleneck.
+
 ## What The Literature Suggests
 
 ### 1. Trading RL Is Mostly Offline RL

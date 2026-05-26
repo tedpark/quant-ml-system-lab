@@ -424,6 +424,19 @@ docs/benchmark_reports/strategy_allocator_sac_demo.md
 artifacts/strategy_checkpoints/strategy_allocator_sac.pt
 ```
 
+Walk-forward:
+
+```bash
+make strategy-allocator-sac-walk-forward
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_walk_forward.json
+docs/benchmark_reports/strategy_allocator_sac_walk_forward.md
+```
+
 What it demonstrates:
 
 - continuous SAC action over the strategy family
@@ -438,6 +451,7 @@ Current limitation:
 
 - the first single-split SAC allocator does not beat the rule-based selector yet
 - it should be improved through walk-forward validation, multi-seed checks, and reward ablations
+- the first walk-forward report is also not robust-ready, with only `1 / 3` positive Sharpe-delta folds
 
 ## Monthly Learning Outputs
 

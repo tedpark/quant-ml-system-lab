@@ -355,6 +355,22 @@ Interpretation:
 - It did avoid one-action collapse by spreading weight across candidate strategies.
 - Next work should focus on walk-forward SAC, multi-seed stability, and reward ablation.
 
+Walk-forward SAC allocator result:
+
+- folds: `3`
+- mean validation Sharpe: `0.6084243033462294`
+- mean rule-based Sharpe: `0.5807367743726034`
+- mean Sharpe delta: `0.027687528973625853`
+- positive Sharpe delta folds: `1`
+- positive return delta folds: `1`
+- robust-ready: `false`
+
+Interpretation:
+
+- The mean delta is slightly positive.
+- The fold consistency is weak.
+- This confirms that the current bottleneck is not only the SAC algorithm; data coverage and validation must improve.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

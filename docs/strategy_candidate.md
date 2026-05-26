@@ -96,6 +96,18 @@ reports/strategy_allocator_sac_demo.json
 artifacts/strategy_checkpoints/strategy_allocator_sac.pt
 ```
 
+SAC allocator walk-forward:
+
+```bash
+make strategy-allocator-sac-walk-forward
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_walk_forward.json
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -209,6 +221,8 @@ Current interpretation:
 - It should not be treated as robust until walk-forward, seed stability, random selector, and transaction-cost stress reports are added.
 
 The SAC allocator is the preferred direction for continuous risk budgeting. It maps a continuous SAC action to softmax weights over the strategy family. The first demo does not beat the rule-based selector yet, but it avoids one-action collapse and gives a better module boundary for risk allocation.
+
+The first SAC walk-forward report is still not robust-ready. Mean Sharpe delta is slightly positive, but only `1 / 3` folds beat the rule-based selector.
 
 ## Public Boundary
 

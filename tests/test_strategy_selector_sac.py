@@ -8,9 +8,11 @@ from quant_ml_lab.strategy_selector import StrategySelectorConfig, build_strateg
 from quant_ml_lab.strategy_selector_sac import (
     SACStrategyAllocatorEnv,
     SACStrategyAllocatorEnvConfig,
+    run_strategy_allocator_sac_walk_forward,
     train_validate_strategy_allocator_sac,
 )
 from quant_ml_lab.torch_sac import TorchSACConfig
+from quant_ml_lab.walk_forward import WalkForwardConfig
 
 
 def _small_dataset(periods: int = 420, seed: int = 51):
@@ -65,3 +67,28 @@ def test_train_validate_strategy_allocator_sac_returns_report(tmp_path: Path):
     assert "sac_allocator_position" in train_output.columns
     assert "sac_allocator_net_return" in validation_output.columns
     assert report.diagnostics["alpha_is_positive"] is True
+
+
+def test_run_strategy_allocator_sac_walk_forward_returns_summary():
+    prices = make_synthetic_pair(SyntheticPairConfig(periods=500, seed=54))
+
+    report = run_strategy_allocator_sac_walk_forward(
+        prices,
+        wf_config=WalkForwardConfig(train_size=300, test_size=80, step_size=80),
+        selector_config=StrategySelectorConfig(transaction_cost_bps=2.0),
+        env_config=SACStrategyAllocatorEnvConfig(transaction_cost_bps=2.0),
+        sac_config=TorchSACConfig(
+            steps=64,
+            warmup_steps=16,
+            batch_size=16,
+            gamma=0.9,
+            hidden_dim=16,
+            target_entropy=-5.0,
+            seed=55,
+        ),
+    )
+
+    assert report.folds
+    assert report.summary["folds"] == len(report.folds)
+    assert "mean_sharpe_delta" in report.summary
+    assert "robust_ready" in report.summary

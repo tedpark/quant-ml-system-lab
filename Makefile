@@ -1,4 +1,4 @@
-.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-allocator-sac-demo monitoring-report experiment-demo latency-benchmark all-reports serve
+.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-allocator-sac-demo strategy-allocator-sac-walk-forward monitoring-report experiment-demo latency-benchmark all-reports serve
 
 test:
 	python -m pytest -q
@@ -51,6 +51,9 @@ strategy-selector-dqn-demo:
 strategy-allocator-sac-demo:
 	python examples/run_strategy_allocator_sac_demo.py
 
+strategy-allocator-sac-walk-forward:
+	python examples/run_strategy_allocator_sac_walk_forward.py
+
 monitoring-report:
 	python examples/run_monitoring_report.py
 
@@ -60,7 +63,7 @@ experiment-demo:
 latency-benchmark:
 	python examples/run_latency_benchmark.py
 
-all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-allocator-sac-demo monitoring-report experiment-demo latency-benchmark
+all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-allocator-sac-demo strategy-allocator-sac-walk-forward monitoring-report experiment-demo latency-benchmark
 
 serve:
 	uvicorn quant_ml_lab.api:app --app-dir src --reload

@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from quant_ml_lab.hmm_rl import build_hmm_rl_dataset
 from quant_ml_lab.strategy_selector import (
     StrategyCandidate,
     StrategyName,
@@ -21,6 +22,7 @@ from quant_ml_lab.torch_sac import (
     train_torch_sac,
 )
 from quant_ml_lab.validation import BacktestMetrics, compute_metrics
+from quant_ml_lab.walk_forward import WalkForwardConfig, iter_walk_forward_splits
 
 SAC_STRATEGY_ACTIONS: tuple[StrategyName, ...] = (
     "no_trade",
@@ -77,6 +79,50 @@ class SACStrategyAllocatorReport:
             "alpha_loss_tail_mean": self.alpha_loss_tail_mean,
             "diagnostics": self.diagnostics,
             "checkpoint_path": self.checkpoint_path,
+            "disclosure": self.disclosure,
+        }
+
+
+@dataclass(frozen=True)
+class SACAllocatorWalkForwardFold:
+    fold: int
+    train_start: str
+    train_end: str
+    validation_start: str
+    validation_end: str
+    validation_metrics: dict[str, float | int]
+    rule_based_validation_metrics: dict[str, float | int]
+    validation_mean_weights: dict[str, float]
+    validation_weight_concentration: float
+    diagnostics: dict[str, bool | float]
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "fold": self.fold,
+            "train_start": self.train_start,
+            "train_end": self.train_end,
+            "validation_start": self.validation_start,
+            "validation_end": self.validation_end,
+            "validation_metrics": self.validation_metrics,
+            "rule_based_validation_metrics": self.rule_based_validation_metrics,
+            "validation_mean_weights": self.validation_mean_weights,
+            "validation_weight_concentration": self.validation_weight_concentration,
+            "diagnostics": self.diagnostics,
+        }
+
+
+@dataclass(frozen=True)
+class SACAllocatorWalkForwardReport:
+    folds: list[SACAllocatorWalkForwardFold]
+    summary: dict[str, float | int | bool]
+    disclosure: str = (
+        "Walk-forward SAC allocator report. Synthetic data only. Not a live strategy."
+    )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "summary": self.summary,
+            "folds": [fold.as_dict() for fold in self.folds],
             "disclosure": self.disclosure,
         }
 
@@ -259,6 +305,60 @@ def train_validate_strategy_allocator_sac(
     return report, train_output, validation_output
 
 
+def run_strategy_allocator_sac_walk_forward(
+    prices: pd.DataFrame,
+    wf_config: WalkForwardConfig | None = None,
+    selector_config: StrategySelectorConfig | None = None,
+    env_config: SACStrategyAllocatorEnvConfig | None = None,
+    sac_config: TorchSACConfig | None = None,
+    rl_train_fraction: float = 0.65,
+) -> SACAllocatorWalkForwardReport:
+    wf_cfg = wf_config or WalkForwardConfig(train_size=420, test_size=120, step_size=120)
+    selector_cfg = selector_config or StrategySelectorConfig()
+    env_cfg = env_config or SACStrategyAllocatorEnvConfig()
+    if not 0.2 < rl_train_fraction < 0.9:
+        raise ValueError("rl_train_fraction must be between 0.2 and 0.9")
+
+    folds: list[SACAllocatorWalkForwardFold] = []
+    for fold_idx, (train_prices, validation_prices) in enumerate(
+        iter_walk_forward_splits(prices, wf_cfg),
+        start=1,
+    ):
+        rl_split = int(len(train_prices) * rl_train_fraction)
+        regime_fit_prices = train_prices.iloc[:rl_split].copy()
+        rl_train_prices = train_prices.iloc[rl_split:].copy()
+        train_dataset = build_hmm_rl_dataset(regime_fit_prices, rl_train_prices)
+        validation_dataset = build_hmm_rl_dataset(train_prices, validation_prices)
+        report, _, _ = train_validate_strategy_allocator_sac(
+            train_frame=train_dataset.frame,
+            validation_frame=validation_dataset.frame,
+            feature_columns=validation_dataset.feature_columns,
+            selector_config=selector_cfg,
+            env_config=env_cfg,
+            sac_config=sac_config,
+            checkpoint_path=None,
+        )
+        folds.append(
+            SACAllocatorWalkForwardFold(
+                fold=fold_idx,
+                train_start=_index_label(train_prices.index[0]),
+                train_end=_index_label(train_prices.index[-1]),
+                validation_start=_index_label(validation_prices.index[0]),
+                validation_end=_index_label(validation_prices.index[-1]),
+                validation_metrics=report.validation_metrics.as_dict(),
+                rule_based_validation_metrics=report.rule_based_validation_metrics.as_dict(),
+                validation_mean_weights=report.validation_mean_weights,
+                validation_weight_concentration=report.validation_weight_concentration,
+                diagnostics=report.diagnostics,
+            )
+        )
+
+    if not folds:
+        raise ValueError("walk-forward configuration produced no folds")
+    summary = _summarize_sac_allocator_walk_forward(folds)
+    return SACAllocatorWalkForwardReport(folds=folds, summary=summary)
+
+
 def evaluate_strategy_allocator_sac(
     frame: pd.DataFrame,
     feature_columns: tuple[str, ...],
@@ -328,3 +428,47 @@ def _returns_from_position(
     turnover = position.diff().abs().fillna(position.abs())
     cost = turnover * (transaction_cost_bps / 10_000.0)
     return gross_return - cost
+
+
+def _summarize_sac_allocator_walk_forward(
+    folds: list[SACAllocatorWalkForwardFold],
+) -> dict[str, float | int | bool]:
+    sharpes = pd.Series([fold.validation_metrics["sharpe"] for fold in folds], dtype=float)
+    rule_sharpes = pd.Series(
+        [fold.rule_based_validation_metrics["sharpe"] for fold in folds],
+        dtype=float,
+    )
+    returns = pd.Series([fold.validation_metrics["total_return"] for fold in folds], dtype=float)
+    rule_returns = pd.Series(
+        [fold.rule_based_validation_metrics["total_return"] for fold in folds],
+        dtype=float,
+    )
+    sharpe_delta = sharpes - rule_sharpes
+    return_delta = returns - rule_returns
+    positive_sharpe_folds = int((sharpe_delta > 0.0).sum())
+    positive_return_folds = int((return_delta > 0.0).sum())
+    return {
+        "folds": len(folds),
+        "mean_validation_sharpe": float(sharpes.mean()),
+        "mean_rule_based_sharpe": float(rule_sharpes.mean()),
+        "mean_sharpe_delta": float(sharpe_delta.mean()),
+        "mean_total_return": float(returns.mean()),
+        "mean_rule_based_total_return": float(rule_returns.mean()),
+        "mean_total_return_delta": float(return_delta.mean()),
+        "positive_sharpe_delta_folds": positive_sharpe_folds,
+        "positive_return_delta_folds": positive_return_folds,
+        "mean_weight_concentration": float(
+            pd.Series([fold.validation_weight_concentration for fold in folds]).mean()
+        ),
+        "robust_ready": bool(
+            positive_sharpe_folds > len(folds) / 2
+            and positive_return_folds > len(folds) / 2
+            and float(sharpe_delta.mean()) > 0.0
+        ),
+    }
+
+
+def _index_label(value: object) -> str:
+    if hasattr(value, "date"):
+        return str(value.date())
+    return str(value)
