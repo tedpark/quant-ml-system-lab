@@ -8,8 +8,10 @@ from quant_ml_lab.data import train_test_split_time
 from quant_ml_lab.hmm_rl import build_hmm_rl_dataset
 from quant_ml_lab.strategy_selector import (
     StrategySelectorConfig,
+    build_strategy_candidates,
     run_strategy_selector,
 )
+from quant_ml_lab.validation import compute_metrics
 
 
 @dataclass(frozen=True)
@@ -17,18 +19,24 @@ class StrategyCandidateBenchmarkCase:
     dataset_id: str
     selected_metrics: dict[str, float | int]
     candidate_metrics: dict[str, dict[str, float | int]]
+    regime_selected_metrics: dict[str, dict[str, float | int]]
+    regime_candidate_metrics: dict[str, dict[str, dict[str, float | int]]]
     best_candidate_by_sharpe: str
     best_candidate_sharpe: float
     selected_minus_best_sharpe: float
+    weakest_regime_by_selected_sharpe: str | None
 
     def as_dict(self) -> dict[str, object]:
         return {
             "dataset_id": self.dataset_id,
             "selected_metrics": self.selected_metrics,
             "candidate_metrics": self.candidate_metrics,
+            "regime_selected_metrics": self.regime_selected_metrics,
+            "regime_candidate_metrics": self.regime_candidate_metrics,
             "best_candidate_by_sharpe": self.best_candidate_by_sharpe,
             "best_candidate_sharpe": self.best_candidate_sharpe,
             "selected_minus_best_sharpe": self.selected_minus_best_sharpe,
+            "weakest_regime_by_selected_sharpe": self.weakest_regime_by_selected_sharpe,
         }
 
 
@@ -61,7 +69,13 @@ def run_strategy_candidate_benchmark_matrix(
     for dataset_id, prices in price_sets.items():
         train_prices, validation_prices = train_test_split_time(prices, train_fraction)
         dataset = build_hmm_rl_dataset(train_prices, validation_prices)
-        _, selector_report = run_strategy_selector(dataset.frame, cfg)
+        frame = dataset.frame.copy()
+        if "synthetic_regime" in validation_prices.columns:
+            frame["synthetic_regime"] = validation_prices["synthetic_regime"].reindex(frame.index)
+        selected_output, selector_report = run_strategy_selector(frame, cfg)
+        regime_selected_metrics = _selected_metrics_by_regime(selected_output)
+        regime_candidate_metrics = _candidate_metrics_by_regime(frame, cfg)
+        weakest_regime = _weakest_regime(regime_selected_metrics)
         best_name, best_metrics = _best_candidate(selector_report.candidate_metrics)
         selected_sharpe = float(selector_report.selected_metrics.sharpe)
         best_sharpe = float(best_metrics["sharpe"])
@@ -70,9 +84,12 @@ def run_strategy_candidate_benchmark_matrix(
                 dataset_id=dataset_id,
                 selected_metrics=selector_report.selected_metrics.as_dict(),
                 candidate_metrics=selector_report.candidate_metrics,
+                regime_selected_metrics=regime_selected_metrics,
+                regime_candidate_metrics=regime_candidate_metrics,
                 best_candidate_by_sharpe=best_name,
                 best_candidate_sharpe=best_sharpe,
                 selected_minus_best_sharpe=selected_sharpe - best_sharpe,
+                weakest_regime_by_selected_sharpe=weakest_regime,
             )
         )
 
@@ -88,6 +105,59 @@ def _best_candidate(
     return max(
         candidate_metrics.items(),
         key=lambda item: float(item[1]["sharpe"]),
+    )
+
+
+def _selected_metrics_by_regime(
+    selected_output: pd.DataFrame,
+) -> dict[str, dict[str, float | int]]:
+    if "synthetic_regime" not in selected_output.columns:
+        return {}
+    metrics: dict[str, dict[str, float | int]] = {}
+    for regime, group in selected_output.groupby("synthetic_regime"):
+        turnover = group["selected_position"].diff().abs().fillna(group["selected_position"].abs())
+        metrics[str(regime)] = compute_metrics(group["selected_net_return"], turnover).as_dict()
+    return metrics
+
+
+def _candidate_metrics_by_regime(
+    frame: pd.DataFrame,
+    config: StrategySelectorConfig,
+) -> dict[str, dict[str, dict[str, float | int]]]:
+    if "synthetic_regime" not in frame.columns:
+        return {}
+    candidates = build_strategy_candidates(frame, config)
+    metrics: dict[str, dict[str, dict[str, float | int]]] = {}
+    for regime, group in frame.groupby("synthetic_regime"):
+        regime_metrics: dict[str, dict[str, float | int]] = {}
+        for name, candidate in candidates.items():
+            position = candidate.position.loc[group.index]
+            returns = _returns_from_position(group, position, config.transaction_cost_bps)
+            turnover = position.diff().abs().fillna(position.abs())
+            regime_metrics[name] = compute_metrics(returns, turnover).as_dict()
+        metrics[str(regime)] = regime_metrics
+    return metrics
+
+
+def _returns_from_position(
+    frame: pd.DataFrame,
+    position: pd.Series,
+    transaction_cost_bps: float,
+) -> pd.Series:
+    gross_return = position * -frame["spread_return_next"]
+    turnover = position.diff().abs().fillna(position.abs())
+    cost = turnover * (transaction_cost_bps / 10_000.0)
+    return gross_return - cost
+
+
+def _weakest_regime(
+    regime_selected_metrics: dict[str, dict[str, float | int]],
+) -> str | None:
+    if not regime_selected_metrics:
+        return None
+    return min(
+        regime_selected_metrics,
+        key=lambda regime: float(regime_selected_metrics[regime]["sharpe"]),
     )
 
 
@@ -125,6 +195,16 @@ def _summarize_candidate_benchmarks(
         pd.Series([case.selected_metrics["sharpe"] for case in cases], dtype=float).mean()
     )
     strongest_candidate = max(mean_candidate_sharpe, key=mean_candidate_sharpe.get)
+    weakest_regime_counts = {
+        str(regime): sum(1 for case in cases if case.weakest_regime_by_selected_sharpe == regime)
+        for regime in sorted(
+            {
+                case.weakest_regime_by_selected_sharpe
+                for case in cases
+                if case.weakest_regime_by_selected_sharpe is not None
+            }
+        )
+    }
     return {
         "cases": len(cases),
         "mean_selected_sharpe": mean_selected_sharpe,
@@ -135,6 +215,9 @@ def _summarize_candidate_benchmarks(
         "mean_candidate_sharpe": mean_candidate_sharpe,
         "mean_candidate_total_return": mean_candidate_return,
         "best_candidate_counts": {name: int(value) for name, value in best_counts.items()},
+        "weakest_regime_counts": {
+            regime: int(value) for regime, value in weakest_regime_counts.items()
+        },
         "benchmark_ready": bool(
             float(selected_minus_best.mean()) >= -0.10
             and int((selected_minus_best >= -0.10).sum()) == len(cases)

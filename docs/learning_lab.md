@@ -518,10 +518,11 @@ Current result:
 - cases: `3`
 - mean selected Sharpe: `-0.9164348741317294`
 - strongest candidate by mean Sharpe: `no_trade`
+- weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
 - selected matches best cases: `0`
 - benchmark-ready: `false`
 
-Interpretation: the current candidate set is not strong enough under multi-regime stress. This is a more fundamental blocker than SAC tuning.
+Interpretation: the current candidate set is not strong enough under multi-regime stress. The regime decomposition points to calm mean-reverting and slow-reversion segments as the weakest cases. This is a more fundamental blocker than SAC tuning.
 
 ## Monthly Learning Outputs
 

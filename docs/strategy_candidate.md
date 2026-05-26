@@ -291,9 +291,10 @@ The first multi-regime candidate benchmark is stricter:
 - mean selected Sharpe: `-0.9164348741317294`
 - mean selected minus best Sharpe: `-0.9164348741317294`
 - strongest candidate by mean Sharpe: `no_trade`
+- weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
 - benchmark-ready: `false`
 
-Current interpretation: the current candidate family is too weak under multi-regime stress. A learned allocator should not be expected to create edge from weak candidates. The next practical redesign is to add stronger candidate signals and benchmark them before more SAC tuning.
+Current interpretation: the current candidate family is too weak under multi-regime stress. The selected policy also loses in calm mean-reverting and slow-reversion segments. A learned allocator should not be expected to create edge from weak candidates. The next practical redesign is to add stronger candidate signals and benchmark them by regime before more SAC tuning.
 
 ## Public Boundary
 

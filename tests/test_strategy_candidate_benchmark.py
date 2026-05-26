@@ -25,4 +25,6 @@ def test_run_strategy_candidate_benchmark_matrix_returns_summary():
     assert report.summary["cases"] == 2
     assert "mean_candidate_sharpe" in report.summary
     assert "best_candidate_counts" in report.summary
+    assert "weakest_regime_counts" in report.summary
     assert "benchmark_ready" in report.summary
+    assert report.cases[0].regime_candidate_metrics

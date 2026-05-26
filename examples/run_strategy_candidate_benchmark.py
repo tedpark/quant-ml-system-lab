@@ -64,8 +64,25 @@ def _markdown_report(payload: dict[str, object]) -> str:
                 "best_candidate": case["best_candidate_by_sharpe"],
                 "best_candidate_sharpe": case["best_candidate_sharpe"],
                 "selected_minus_best_sharpe": case["selected_minus_best_sharpe"],
+                "weakest_regime": case["weakest_regime_by_selected_sharpe"],
             }
         )
+    regime_rows = []
+    for case in cases:
+        assert isinstance(case, dict)
+        regime_metrics = case["regime_selected_metrics"]
+        assert isinstance(regime_metrics, dict)
+        for regime, metrics in regime_metrics.items():
+            assert isinstance(metrics, dict)
+            regime_rows.append(
+                {
+                    "dataset": case["dataset_id"],
+                    "regime": regime,
+                    "selected_sharpe": metrics["sharpe"],
+                    "selected_total_return": metrics["total_return"],
+                    "selected_trades": metrics["trades"],
+                }
+            )
     candidate_rows = [
         {
             "candidate": name,
@@ -89,15 +106,20 @@ allocator to beat.
 - worst selected minus best Sharpe: `{summary["worst_selected_minus_best_sharpe"]}`
 - selected matches best cases: `{summary["selected_matches_best_cases"]}`
 - strongest candidate by mean Sharpe: `{summary["strongest_candidate_by_mean_sharpe"]}`
+- weakest regime counts: `{summary["weakest_regime_counts"]}`
 - benchmark-ready: `{summary["benchmark_ready"]}`
 
 ## Dataset Cases
 
-{markdown_table(rows, ["dataset", "selected_sharpe", "best_candidate", "best_candidate_sharpe", "selected_minus_best_sharpe"])}
+{markdown_table(rows, ["dataset", "selected_sharpe", "best_candidate", "best_candidate_sharpe", "selected_minus_best_sharpe", "weakest_regime"])}
 
 ## Candidate Averages
 
 {markdown_table(candidate_rows, ["candidate", "mean_sharpe", "mean_total_return", "best_count"])}
+
+## Regime Decomposition
+
+{markdown_table(regime_rows, ["dataset", "regime", "selected_sharpe", "selected_total_return", "selected_trades"])}
 
 ## Interpretation
 

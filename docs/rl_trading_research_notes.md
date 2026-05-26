@@ -417,13 +417,15 @@ Multi-regime candidate benchmark result:
 - worst selected minus best Sharpe: `-1.0888504377611108`
 - selected matches best cases: `0`
 - strongest candidate by mean Sharpe: `no_trade`
+- weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
 - benchmark-ready: `false`
 
 Interpretation:
 
 - The candidate set itself is weak under multi-regime stress.
 - RL allocation is not the primary issue if no-trade is the strongest candidate.
-- The next redesign should add better supervised/signal candidates and regime-conditioned candidate diagnostics before more SAC tuning.
+- The regime decomposition shows losses in both calm mean-reverting and slow-reversion segments.
+- The next redesign should add better supervised/signal candidates, meta-label filters, and regime-conditioned candidate diagnostics before more SAC tuning.
 
 ## Recommended Roadmap
 

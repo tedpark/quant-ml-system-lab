@@ -162,14 +162,16 @@ The strategy candidate benchmark now evaluates the public candidate family on mu
 - worst selected minus best Sharpe: `-1.0888504377611108`
 - selected matches best cases: `0`
 - strongest candidate by mean Sharpe: `no_trade`
+- weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
 - benchmark-ready: `false`
 
 Interpretation:
 
 - The current public candidate family is not strong under multi-regime stress.
 - The best candidate is no-trade in all tested cases.
+- The selected policy loses even in `calm_mean_reverting`, where the public mean-reversion family should have the best chance.
 - This means the allocator is being asked to allocate among weak candidates, which is structurally different from learning a robust trading edge.
-- The next architecture must improve the candidate signal family and data regime diversity before expecting SAC to help.
+- The next architecture must improve the candidate signal family, add supervised/meta-label filters, and decompose every candidate by regime before expecting SAC to help.
 
 ## What The Literature Suggests
 
@@ -239,6 +241,21 @@ Implication for this repo:
 - HMM state should probably control risk and allocation, not invent directional edge by itself.
 - Regime transitions and uncertainty should be explicit state features.
 
+### 5. Candidate Signals Need Supervised Filtering Before RL
+
+Relevant papers and references:
+
+- [Evaluating machine learning classification for financial trading: An empirical approach](https://www.sciencedirect.com/science/article/pii/S0957417416000282)
+- [Advances in Financial Machine Learning](https://www.econbiz.de/Record/advances-in-financial-machine-learning-l%C3%B3pez-prado-marcos/10011841464)
+- [A Hybrid Learning Approach to Detecting Regime Switches in Financial Markets](https://ideas.repec.org/p/arx/papers/2108.05801.html)
+- [Market Regime Detection via Realized Covariances](https://ideas.repec.org/p/arx/papers/2104.03667.html)
+
+Implication for this repo:
+
+- The next useful model is probably not another RL algorithm.
+- A supervised/meta-label layer should first estimate whether a candidate signal should be traded at all.
+- RL should allocate size only after the candidate signal family passes no-trade, regime, and cost benchmarks.
+
 ## Is RL The Wrong Tool?
 
 RL is probably the wrong tool for direct alpha discovery in the current setup.
@@ -265,6 +282,8 @@ Better framing:
 Do not ask RL to discover alpha.
 Ask RL to allocate risk across alpha candidates that already have evidence.
 ```
+
+The current candidate benchmark shows that this condition is not yet met.
 
 ## Is The Data Insufficient?
 
