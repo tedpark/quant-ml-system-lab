@@ -526,6 +526,35 @@ Current result:
 
 Interpretation: the current candidate set is not strong enough under multi-regime stress. The regime decomposition points to calm mean-reverting and slow-reversion segments as the weakest cases. The new readiness gate blocks further SAC tuning until the candidate family can produce repeated non-no-trade edge. This is a more fundamental blocker than RL algorithm choice.
 
+## Current Meta-Label Readiness Lab
+
+The meta-label readiness report tests whether public candidate signals have enough
+trade/skip label quality before adding SAC allocation.
+
+Run:
+
+```bash
+make meta-label-readiness
+```
+
+Output:
+
+```text
+reports/meta_label_readiness.json
+docs/benchmark_reports/meta_label_readiness.md
+```
+
+Current result:
+
+- ready candidate diagnostics: `1 / 12`
+- ready candidate rate: `0.08333333333333333`
+- best candidate by lift: `cvar_defensive`
+- best feature by lift: `feature_baseline_drawdown`
+- meta-label ready: `false`
+- research decision: `candidate_features_or_labels_need_redesign`
+
+Interpretation: the supervised filter direction is right, but the current public labels and features do not validate strongly across time. The next lab step should improve labeling and feature stability before SAC consumes the filtered candidates.
+
 ## Monthly Learning Outputs
 
 Each month should produce at least one of:

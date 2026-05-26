@@ -301,6 +301,17 @@ The first multi-regime candidate benchmark is stricter:
 
 Current interpretation: the current candidate family is too weak under multi-regime stress. The selected policy also loses in calm mean-reverting and slow-reversion segments. A learned allocator should not be expected to create edge from weak candidates. The readiness gate now blocks more SAC tuning and points the next iteration toward stronger candidate signals, supervised/meta-label filters, and regime-level validation.
 
+The first meta-label readiness report adds the supervised filter diagnostic:
+
+- ready candidate diagnostics: `1 / 12`
+- ready candidate rate: `0.08333333333333333`
+- best candidate by lift: `cvar_defensive`
+- best feature by lift: `feature_baseline_drawdown`
+- meta-label ready: `false`
+- research decision: `candidate_features_or_labels_need_redesign`
+
+Current interpretation: meta-labeling is the right architectural next step, but the first time-split diagnostic does not validate enough stable trade/skip signal. The project should improve label construction and feature stability before using SAC as an allocator behind the filter.
+
 ## Public Boundary
 
 This pipeline deliberately excludes:

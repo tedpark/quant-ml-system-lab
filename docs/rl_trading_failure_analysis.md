@@ -256,6 +256,9 @@ Relevant papers and references:
 
 - [Evaluating machine learning classification for financial trading: An empirical approach](https://www.sciencedirect.com/science/article/pii/S0957417416000282)
 - [Advances in Financial Machine Learning](https://www.econbiz.de/Record/advances-in-financial-machine-learning-l%C3%B3pez-prado-marcos/10011841464)
+- [Meta-Labeling: Theory and Framework](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4032018)
+- [Algorithmic crypto trading using information-driven bars, triple barrier labeling and deep learning](https://link.springer.com/10.1186/s40854-025-00866-w)
+- [Backtest overfitting in the machine learning era](https://www.sciencedirect.com/science/article/pii/S0950705124011110)
 - [A Hybrid Learning Approach to Detecting Regime Switches in Financial Markets](https://ideas.repec.org/p/arx/papers/2108.05801.html)
 - [Market Regime Detection via Realized Covariances](https://ideas.repec.org/p/arx/papers/2104.03667.html)
 
@@ -264,6 +267,30 @@ Implication for this repo:
 - The next useful model is probably not another RL algorithm.
 - A supervised/meta-label layer should first estimate whether a candidate signal should be traded at all.
 - RL should allocate size only after the candidate signal family passes no-trade, regime, and cost benchmarks.
+- The first meta-label diagnostic must be time-split; selecting the best filter bucket and evaluating it on the same slice would just recreate overfitting.
+
+### Current Meta-Label Readiness Result
+
+The public meta-label diagnostic now builds trade/skip labels for each non-cash candidate and selects a feature bucket on the earlier slice before validating it on the later slice.
+
+Result:
+
+- cases: `3`
+- candidate diagnostics: `12`
+- ready candidate diagnostics: `1`
+- ready candidate rate: `0.08333333333333333`
+- best candidate by lift: `cvar_defensive`
+- best feature by lift: `feature_baseline_drawdown`
+- best bin lift: `0.08993427879626431`
+- meta-label ready: `false`
+- research decision: `candidate_features_or_labels_need_redesign`
+
+Interpretation:
+
+- Same-slice feature buckets looked promising, but time-split validation rejected most of the apparent lift.
+- This supports the overfitting concern from the literature.
+- Meta-labeling is still the correct next architecture, but the current labels/features are not stable enough to put SAC behind them yet.
+- The next implementation should improve label construction, add purged/walk-forward validation, and test richer but still public candidate features.
 
 ## Is RL The Wrong Tool?
 
@@ -411,6 +438,7 @@ Required artifacts:
 - transaction-cost stress report: first version done
 - reward ablation report: first version done
 - individual-candidate benchmark report: first version done
+- meta-label readiness report: first version done
 
 ### Phase 3. Add Offline RL Safety
 
@@ -424,6 +452,7 @@ Required gates:
 - best static candidate baseline: first candidate-level gate added
 - rule-based selector baseline
 - regime-level negative-performance rate: first gate added
+- time-split meta-label filter stability: first diagnostic added
 
 The current safety gate says:
 

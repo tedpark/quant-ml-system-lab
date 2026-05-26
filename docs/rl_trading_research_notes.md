@@ -433,6 +433,24 @@ Interpretation:
 - The next redesign should add better supervised/signal candidates, meta-label filters, and regime-conditioned candidate diagnostics before more SAC tuning.
 - The new readiness gate converts that conclusion into code: SAC allocation is blocked until the candidate family produces repeated non-no-trade edge.
 
+Meta-label readiness result:
+
+- cases: `3`
+- candidate diagnostics: `12`
+- ready candidate diagnostics: `1`
+- ready candidate rate: `0.08333333333333333`
+- best candidate by lift: `cvar_defensive`
+- best feature by lift: `feature_baseline_drawdown`
+- best bin lift: `0.08993427879626431`
+- meta-label ready: `false`
+- research decision: `candidate_features_or_labels_need_redesign`
+
+Interpretation:
+
+- The first supervised trade/skip diagnostic is useful, but it is not strong enough yet.
+- The best bucket is selected on the early slice and evaluated on the later slice, so the failed gate is a stronger warning than a same-sample label report.
+- The next work is not more SAC tuning. It is better label construction, richer public features, and purged/walk-forward validation for the meta-label layer.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller

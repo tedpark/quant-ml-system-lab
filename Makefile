@@ -1,4 +1,4 @@
-.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-candidate-benchmark strategy-allocator-sac-demo strategy-allocator-sac-walk-forward strategy-allocator-sac-robustness strategy-allocator-sac-reward-ablation monitoring-report experiment-demo latency-benchmark all-reports serve
+.PHONY: test lint sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-candidate-benchmark meta-label-readiness strategy-allocator-sac-demo strategy-allocator-sac-walk-forward strategy-allocator-sac-robustness strategy-allocator-sac-reward-ablation monitoring-report experiment-demo latency-benchmark all-reports serve
 
 test:
 	python -m pytest -q
@@ -51,6 +51,9 @@ strategy-selector-dqn-demo:
 strategy-candidate-benchmark:
 	python examples/run_strategy_candidate_benchmark.py
 
+meta-label-readiness:
+	python examples/run_meta_label_readiness.py
+
 strategy-allocator-sac-demo:
 	python examples/run_strategy_allocator_sac_demo.py
 
@@ -72,7 +75,7 @@ experiment-demo:
 latency-benchmark:
 	python examples/run_latency_benchmark.py
 
-all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-candidate-benchmark strategy-allocator-sac-demo strategy-allocator-sac-walk-forward strategy-allocator-sac-robustness strategy-allocator-sac-reward-ablation monitoring-report experiment-demo latency-benchmark
+all-reports: sample-backtest walk-forward baseline-vs-regime cvar-sizing rl-sizing-comparison q-learning-gridworld sac-bandit torch-sac hmm-sac-sizing hmm-sac-training-validation pair-rl-strategy pair-rl-strategy-walk-forward strategy-selector-demo strategy-selector-dqn-demo strategy-candidate-benchmark meta-label-readiness strategy-allocator-sac-demo strategy-allocator-sac-walk-forward strategy-allocator-sac-robustness strategy-allocator-sac-reward-ablation monitoring-report experiment-demo latency-benchmark
 
 serve:
 	uvicorn quant_ml_lab.api:app --app-dir src --reload
