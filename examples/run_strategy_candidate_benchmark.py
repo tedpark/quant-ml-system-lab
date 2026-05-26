@@ -107,7 +107,15 @@ allocator to beat.
 - selected matches best cases: `{summary["selected_matches_best_cases"]}`
 - strongest candidate by mean Sharpe: `{summary["strongest_candidate_by_mean_sharpe"]}`
 - weakest regime counts: `{summary["weakest_regime_counts"]}`
+- no-trade best rate: `{summary["no_trade_best_rate"]}`
+- non-no-trade best rate: `{summary["non_no_trade_best_rate"]}`
+- selected positive Sharpe rate: `{summary["selected_positive_sharpe_rate"]}`
+- negative selected regime rate: `{summary["negative_selected_regime_rate"]}`
+- mean candidate trade rate: `{summary["mean_candidate_trade_rate"]}`
 - benchmark-ready: `{summary["benchmark_ready"]}`
+- RL allocation ready: `{summary["rl_allocation_ready"]}`
+- research decision: `{summary["research_decision"]}`
+- redesign reasons: `{summary["redesign_reasons"]}`
 
 ## Dataset Cases
 
@@ -126,6 +134,10 @@ allocator to beat.
 If a simple candidate repeatedly beats the selector or RL allocator, the next model
 should not be tuned until the benchmark gap is explained. This protects the lab from
 mistaking model complexity for strategy quality.
+
+The RL allocation gate is intentionally strict. If no-trade is the dominant best
+candidate or the selected policy loses across many regimes, the next iteration should
+redesign candidate signals and supervised/meta-label filters before tuning SAC.
 """
 
 

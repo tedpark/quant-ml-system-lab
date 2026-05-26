@@ -293,8 +293,13 @@ The first multi-regime candidate benchmark is stricter:
 - strongest candidate by mean Sharpe: `no_trade`
 - weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
 - benchmark-ready: `false`
+- no-trade best rate: `1.0`
+- selected positive Sharpe rate: `0.0`
+- negative selected regime rate: `0.6666666666666666`
+- RL allocation ready: `false`
+- research decision: `candidate_signal_redesign_before_rl`
 
-Current interpretation: the current candidate family is too weak under multi-regime stress. The selected policy also loses in calm mean-reverting and slow-reversion segments. A learned allocator should not be expected to create edge from weak candidates. The next practical redesign is to add stronger candidate signals and benchmark them by regime before more SAC tuning.
+Current interpretation: the current candidate family is too weak under multi-regime stress. The selected policy also loses in calm mean-reverting and slow-reversion segments. A learned allocator should not be expected to create edge from weak candidates. The readiness gate now blocks more SAC tuning and points the next iteration toward stronger candidate signals, supervised/meta-label filters, and regime-level validation.
 
 ## Public Boundary
 

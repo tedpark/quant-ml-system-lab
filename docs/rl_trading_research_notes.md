@@ -418,7 +418,12 @@ Multi-regime candidate benchmark result:
 - selected matches best cases: `0`
 - strongest candidate by mean Sharpe: `no_trade`
 - weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
+- no-trade best rate: `1.0`
+- selected positive Sharpe rate: `0.0`
+- negative selected regime rate: `0.6666666666666666`
 - benchmark-ready: `false`
+- RL allocation ready: `false`
+- research decision: `candidate_signal_redesign_before_rl`
 
 Interpretation:
 
@@ -426,6 +431,7 @@ Interpretation:
 - RL allocation is not the primary issue if no-trade is the strongest candidate.
 - The regime decomposition shows losses in both calm mean-reverting and slow-reversion segments.
 - The next redesign should add better supervised/signal candidates, meta-label filters, and regime-conditioned candidate diagnostics before more SAC tuning.
+- The new readiness gate converts that conclusion into code: SAC allocation is blocked until the candidate family produces repeated non-no-trade edge.
 
 ## Recommended Roadmap
 

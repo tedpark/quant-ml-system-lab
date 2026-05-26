@@ -163,7 +163,13 @@ The strategy candidate benchmark now evaluates the public candidate family on mu
 - selected matches best cases: `0`
 - strongest candidate by mean Sharpe: `no_trade`
 - weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
+- no-trade best rate: `1.0`
+- non-no-trade best rate: `0.0`
+- selected positive Sharpe rate: `0.0`
+- negative selected regime rate: `0.6666666666666666`
 - benchmark-ready: `false`
+- RL allocation ready: `false`
+- research decision: `candidate_signal_redesign_before_rl`
 
 Interpretation:
 
@@ -172,6 +178,7 @@ Interpretation:
 - The selected policy loses even in `calm_mean_reverting`, where the public mean-reversion family should have the best chance.
 - This means the allocator is being asked to allocate among weak candidates, which is structurally different from learning a robust trading edge.
 - The next architecture must improve the candidate signal family, add supervised/meta-label filters, and decompose every candidate by regime before expecting SAC to help.
+- The new RL allocation gate rejects SAC iteration because the tradable candidate edge is not repeated across datasets and too many regime slices are negative.
 
 ## What The Literature Suggests
 
@@ -201,12 +208,14 @@ Relevant papers:
 - [All that Glitters Is Not Gold: Comparing Backtest and Out-of-Sample Performance on a Large Cohort of Trading Algorithms](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2745220)
 - [Backtest Overfitting in the Machine Learning Era: A Comparison of Out-of-Sample Testing Methods in a Synthetic Controlled Environment](https://papers.ssrn.com/sol3/Delivery.cfm/4778909.pdf?abstractid=4778909&mirid=1)
 - [Backtesting Trading Strategies with GAN To Avoid Overfitting](https://arxiv.org/abs/2209.04895)
+- [Walk Forward Correlation: A Diagnostic for Over-Fitting and Structural Edge in Trading Strategy Optimisation](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6324079)
 
 Implication for this repo:
 
 - A single validation split is not enough.
 - Multiple seeds are not enough if the market window is still narrow.
 - Walk-forward and parameter-stability checks are mandatory.
+- The lab should reject models that win only through isolated windows or fragile candidate selection.
 
 ### 3. Trading RL Needs Realistic Frictions And Baselines
 
@@ -407,13 +416,23 @@ Required artifacts:
 
 Required gates:
 
-- action distribution coverage
+- action distribution coverage: first candidate-level proxy added
 - out-of-distribution state score
 - conservative action penalty
 - random policy baseline
-- no-trade baseline
-- best static candidate baseline
+- no-trade baseline: first candidate-level gate added
+- best static candidate baseline: first candidate-level gate added
 - rule-based selector baseline
+- regime-level negative-performance rate: first gate added
+
+The current safety gate says:
+
+```text
+rl_allocation_ready = false
+research_decision = candidate_signal_redesign_before_rl
+```
+
+That means SAC should not be tuned further on this candidate family until a supervised/meta-label filter or stronger signal family can beat no-trade and static candidate baselines across regimes.
 
 ### Phase 4. Only Then Improve SAC
 

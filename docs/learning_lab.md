@@ -521,8 +521,10 @@ Current result:
 - weakest regime counts: `{'calm_mean_reverting': 2, 'slow_reversion': 1}`
 - selected matches best cases: `0`
 - benchmark-ready: `false`
+- RL allocation ready: `false`
+- research decision: `candidate_signal_redesign_before_rl`
 
-Interpretation: the current candidate set is not strong enough under multi-regime stress. The regime decomposition points to calm mean-reverting and slow-reversion segments as the weakest cases. This is a more fundamental blocker than SAC tuning.
+Interpretation: the current candidate set is not strong enough under multi-regime stress. The regime decomposition points to calm mean-reverting and slow-reversion segments as the weakest cases. The new readiness gate blocks further SAC tuning until the candidate family can produce repeated non-no-trade edge. This is a more fundamental blocker than RL algorithm choice.
 
 ## Monthly Learning Outputs
 

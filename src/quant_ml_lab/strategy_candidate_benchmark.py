@@ -13,6 +13,8 @@ from quant_ml_lab.strategy_selector import (
 )
 from quant_ml_lab.validation import compute_metrics
 
+SummaryValue = float | int | bool | str | dict[str, float] | dict[str, int] | list[str]
+
 
 @dataclass(frozen=True)
 class StrategyCandidateBenchmarkCase:
@@ -43,7 +45,7 @@ class StrategyCandidateBenchmarkCase:
 @dataclass(frozen=True)
 class StrategyCandidateBenchmarkReport:
     cases: list[StrategyCandidateBenchmarkCase]
-    summary: dict[str, float | int | bool | dict[str, float] | dict[str, int]]
+    summary: dict[str, SummaryValue]
     disclosure: str = (
         "Candidate-level benchmark matrix. Synthetic data only. Not a live strategy."
     )
@@ -163,7 +165,7 @@ def _weakest_regime(
 
 def _summarize_candidate_benchmarks(
     cases: list[StrategyCandidateBenchmarkCase],
-) -> dict[str, float | int | bool | dict[str, float] | dict[str, int]]:
+) -> dict[str, SummaryValue]:
     candidate_names = tuple(cases[0].candidate_metrics)
     mean_candidate_sharpe = {
         name: float(
@@ -205,6 +207,19 @@ def _summarize_candidate_benchmarks(
             }
         )
     }
+    diagnostics = _offline_rl_readiness_diagnostics(cases, candidate_names)
+    benchmark_ready = bool(
+        float(selected_minus_best.mean()) >= -0.10
+        and int((selected_minus_best >= -0.10).sum()) == len(cases)
+    )
+    rl_allocation_ready = bool(
+        benchmark_ready
+        and diagnostics["no_trade_best_rate"] <= 0.25
+        and diagnostics["non_no_trade_best_rate"] >= 0.50
+        and diagnostics["selected_positive_sharpe_rate"] >= 0.50
+        and diagnostics["negative_selected_regime_rate"] <= 0.25
+    )
+    redesign_reasons = _redesign_reasons(benchmark_ready, rl_allocation_ready, diagnostics)
     return {
         "cases": len(cases),
         "mean_selected_sharpe": mean_selected_sharpe,
@@ -218,8 +233,80 @@ def _summarize_candidate_benchmarks(
         "weakest_regime_counts": {
             regime: int(value) for regime, value in weakest_regime_counts.items()
         },
-        "benchmark_ready": bool(
-            float(selected_minus_best.mean()) >= -0.10
-            and int((selected_minus_best >= -0.10).sum()) == len(cases)
+        "no_trade_best_rate": diagnostics["no_trade_best_rate"],
+        "non_no_trade_best_rate": diagnostics["non_no_trade_best_rate"],
+        "selected_positive_sharpe_rate": diagnostics["selected_positive_sharpe_rate"],
+        "negative_selected_regime_rate": diagnostics["negative_selected_regime_rate"],
+        "mean_candidate_trade_rate": diagnostics["mean_candidate_trade_rate"],
+        "benchmark_ready": benchmark_ready,
+        "rl_allocation_ready": rl_allocation_ready,
+        "research_decision": (
+            "candidate_signal_redesign_before_rl"
+            if not rl_allocation_ready
+            else "rl_allocator_iteration_allowed"
+        ),
+        "redesign_reasons": redesign_reasons,
+    }
+
+
+def _offline_rl_readiness_diagnostics(
+    cases: list[StrategyCandidateBenchmarkCase],
+    candidate_names: tuple[str, ...],
+) -> dict[str, float]:
+    selected_sharpes = pd.Series(
+        [case.selected_metrics["sharpe"] for case in cases],
+        dtype=float,
+    )
+    regime_sharpes = pd.Series(
+        [
+            metrics["sharpe"]
+            for case in cases
+            for metrics in case.regime_selected_metrics.values()
+        ],
+        dtype=float,
+    )
+    candidate_trade_rates = [
+        float(
+            pd.Series(
+                [case.candidate_metrics[name]["trades"] for case in cases],
+                dtype=float,
+            ).gt(0.0).mean()
+        )
+        for name in candidate_names
+        if name != "no_trade"
+    ]
+    no_trade_best_count = sum(1 for case in cases if case.best_candidate_by_sharpe == "no_trade")
+    return {
+        "no_trade_best_rate": float(no_trade_best_count / len(cases)),
+        "non_no_trade_best_rate": float(1.0 - no_trade_best_count / len(cases)),
+        "selected_positive_sharpe_rate": float(selected_sharpes.gt(0.0).mean()),
+        "negative_selected_regime_rate": (
+            float(regime_sharpes.lt(0.0).mean()) if not regime_sharpes.empty else 0.0
+        ),
+        "mean_candidate_trade_rate": (
+            float(pd.Series(candidate_trade_rates, dtype=float).mean())
+            if candidate_trade_rates
+            else 0.0
         ),
     }
+
+
+def _redesign_reasons(
+    benchmark_ready: bool,
+    rl_allocation_ready: bool,
+    diagnostics: dict[str, float],
+) -> list[str]:
+    if rl_allocation_ready:
+        return []
+    reasons: list[str] = []
+    if not benchmark_ready:
+        reasons.append("selected_policy_does_not_beat_best_static_candidate")
+    if diagnostics["no_trade_best_rate"] > 0.25:
+        reasons.append("no_trade_is_the_dominant_best_candidate")
+    if diagnostics["non_no_trade_best_rate"] < 0.50:
+        reasons.append("tradable_candidate_edge_is_not_repeated_across_datasets")
+    if diagnostics["selected_positive_sharpe_rate"] < 0.50:
+        reasons.append("selected_policy_has_low_positive_sharpe_frequency")
+    if diagnostics["negative_selected_regime_rate"] > 0.25:
+        reasons.append("selected_policy_loses_across_too_many_regimes")
+    return reasons
