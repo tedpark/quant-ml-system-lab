@@ -121,6 +121,19 @@ reports/strategy_allocator_sac_robustness.json
 docs/benchmark_reports/strategy_allocator_sac_robustness.md
 ```
 
+SAC allocator reward ablation:
+
+```bash
+make strategy-allocator-sac-reward-ablation
+```
+
+Output:
+
+```text
+reports/strategy_allocator_sac_reward_ablation.json
+docs/benchmark_reports/strategy_allocator_sac_reward_ablation.md
+```
+
 ## Gates
 
 Infrastructure gates:
@@ -247,6 +260,17 @@ The SAC robustness matrix is stricter and currently fails:
 - robust-ready: `false`
 
 Current interpretation: the allocator can sometimes improve total return, but it is not stable enough across data seeds, SAC seeds, and cost assumptions. The right next step is not to add another RL algorithm; it is to improve data diversity, reward ablation, baseline decomposition, and offline-RL safety checks.
+
+The first reward ablation also fails:
+
+- cases: `10`
+- best ablation by Sharpe: `no_drawdown_penalty`
+- full reward mean Sharpe delta: `-0.1791830938487189`
+- best minus full Sharpe delta: `0.0002405495444227912`
+- robust case rate: `0.0`
+- robust-ready: `false`
+
+Current interpretation: removing one public penalty at a time barely changes the outcome. The problem is probably not a single reward coefficient. The stronger next move is multi-regime data generation and candidate-level benchmark decomposition.
 
 ## Public Boundary
 

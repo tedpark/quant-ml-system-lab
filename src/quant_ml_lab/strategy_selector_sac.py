@@ -159,6 +159,36 @@ class SACAllocatorRobustnessReport:
         }
 
 
+@dataclass(frozen=True)
+class SACAllocatorRewardAblationCase:
+    ablation: str
+    dataset_id: str
+    walk_forward_summary: dict[str, float | int | bool]
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "ablation": self.ablation,
+            "dataset_id": self.dataset_id,
+            "walk_forward_summary": self.walk_forward_summary,
+        }
+
+
+@dataclass(frozen=True)
+class SACAllocatorRewardAblationReport:
+    cases: list[SACAllocatorRewardAblationCase]
+    summary: dict[str, float | int | bool | str]
+    disclosure: str = (
+        "Reward ablation report for public SAC allocator. Synthetic data only. Not a live strategy."
+    )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "summary": self.summary,
+            "cases": [case.as_dict() for case in self.cases],
+            "disclosure": self.disclosure,
+        }
+
+
 class SACStrategyAllocatorEnv:
     """SAC environment that allocates continuous weights across strategy candidates."""
 
@@ -449,6 +479,50 @@ def run_strategy_allocator_sac_robustness_matrix(
     )
 
 
+def run_strategy_allocator_sac_reward_ablation(
+    price_sets: dict[str, pd.DataFrame],
+    wf_config: WalkForwardConfig | None = None,
+    selector_config: StrategySelectorConfig | None = None,
+    env_config: SACStrategyAllocatorEnvConfig | None = None,
+    sac_config: TorchSACConfig | None = None,
+    rl_train_fraction: float = 0.65,
+) -> SACAllocatorRewardAblationReport:
+    if not price_sets:
+        raise ValueError("price_sets must not be empty")
+
+    base_env_cfg = env_config or SACStrategyAllocatorEnvConfig()
+    ablations = {
+        "full_reward": base_env_cfg,
+        "no_turnover_penalty": replace(base_env_cfg, turnover_penalty=0.0),
+        "no_high_vol_penalty": replace(base_env_cfg, high_vol_penalty=0.0),
+        "no_drawdown_penalty": replace(base_env_cfg, drawdown_penalty=0.0),
+        "no_concentration_penalty": replace(base_env_cfg, concentration_penalty=0.0),
+    }
+    cases: list[SACAllocatorRewardAblationCase] = []
+    for dataset_id, prices in price_sets.items():
+        for ablation, ablated_env_cfg in ablations.items():
+            wf_report = run_strategy_allocator_sac_walk_forward(
+                prices=prices,
+                wf_config=wf_config,
+                selector_config=selector_config,
+                env_config=ablated_env_cfg,
+                sac_config=sac_config,
+                rl_train_fraction=rl_train_fraction,
+            )
+            cases.append(
+                SACAllocatorRewardAblationCase(
+                    ablation=ablation,
+                    dataset_id=dataset_id,
+                    walk_forward_summary=wf_report.summary,
+                )
+            )
+
+    return SACAllocatorRewardAblationReport(
+        cases=cases,
+        summary=_summarize_sac_allocator_reward_ablation(cases),
+    )
+
+
 def evaluate_strategy_allocator_sac(
     frame: pd.DataFrame,
     feature_columns: tuple[str, ...],
@@ -600,6 +674,58 @@ def _summarize_sac_allocator_robustness(
             and positive_return_rate >= 0.75
             and float(sharpe_delta.min()) > 0.0
         ),
+    }
+
+
+def _summarize_sac_allocator_reward_ablation(
+    cases: list[SACAllocatorRewardAblationCase],
+) -> dict[str, float | int | bool | str]:
+    sharpe_delta = pd.Series(
+        [case.walk_forward_summary["mean_sharpe_delta"] for case in cases],
+        dtype=float,
+        index=[case.ablation for case in cases],
+    )
+    return_delta = pd.Series(
+        [case.walk_forward_summary["mean_total_return_delta"] for case in cases],
+        dtype=float,
+        index=[case.ablation for case in cases],
+    )
+    robust_flags = pd.Series(
+        [bool(case.walk_forward_summary["robust_ready"]) for case in cases],
+        dtype=bool,
+        index=[case.ablation for case in cases],
+    )
+    by_ablation = (
+        pd.DataFrame(
+            {
+                "sharpe_delta": sharpe_delta.to_numpy(),
+                "return_delta": return_delta.to_numpy(),
+                "robust_ready": robust_flags.to_numpy(dtype=int),
+            },
+            index=sharpe_delta.index,
+        )
+        .groupby(level=0)
+        .mean()
+    )
+    best_ablation = str(by_ablation["sharpe_delta"].idxmax())
+    worst_ablation = str(by_ablation["sharpe_delta"].idxmin())
+    full_sharpe_delta = float(by_ablation.loc["full_reward", "sharpe_delta"])
+    best_sharpe_delta = float(by_ablation.loc[best_ablation, "sharpe_delta"])
+    return {
+        "cases": len(cases),
+        "ablations": int(by_ablation.shape[0]),
+        "best_ablation_by_sharpe": best_ablation,
+        "worst_ablation_by_sharpe": worst_ablation,
+        "best_mean_sharpe_delta": best_sharpe_delta,
+        "full_reward_mean_sharpe_delta": full_sharpe_delta,
+        "best_minus_full_sharpe_delta": float(best_sharpe_delta - full_sharpe_delta),
+        "mean_sharpe_delta": float(sharpe_delta.mean()),
+        "worst_sharpe_delta": float(sharpe_delta.min()),
+        "mean_total_return_delta": float(return_delta.mean()),
+        "worst_total_return_delta": float(return_delta.min()),
+        "robust_cases": int(robust_flags.sum()),
+        "robust_case_rate": float(robust_flags.mean()),
+        "robust_ready": bool(robust_flags.mean() >= 0.75 and float(sharpe_delta.min()) > 0.0),
     }
 
 

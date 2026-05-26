@@ -8,6 +8,7 @@ from quant_ml_lab.strategy_selector import StrategySelectorConfig, build_strateg
 from quant_ml_lab.strategy_selector_sac import (
     SACStrategyAllocatorEnv,
     SACStrategyAllocatorEnvConfig,
+    run_strategy_allocator_sac_reward_ablation,
     run_strategy_allocator_sac_robustness_matrix,
     run_strategy_allocator_sac_walk_forward,
     train_validate_strategy_allocator_sac,
@@ -121,4 +122,31 @@ def test_run_strategy_allocator_sac_robustness_matrix_returns_summary():
     assert len(report.cases) == 2
     assert report.summary["cases"] == 2
     assert "positive_sharpe_rate" in report.summary
+    assert "robust_ready" in report.summary
+
+
+def test_run_strategy_allocator_sac_reward_ablation_returns_summary():
+    price_sets = {
+        "seed_59": make_synthetic_pair(SyntheticPairConfig(periods=420, seed=59)),
+    }
+
+    report = run_strategy_allocator_sac_reward_ablation(
+        price_sets=price_sets,
+        wf_config=WalkForwardConfig(train_size=260, test_size=70, step_size=70),
+        selector_config=StrategySelectorConfig(transaction_cost_bps=2.0),
+        env_config=SACStrategyAllocatorEnvConfig(transaction_cost_bps=2.0),
+        sac_config=TorchSACConfig(
+            steps=36,
+            warmup_steps=12,
+            batch_size=12,
+            gamma=0.9,
+            hidden_dim=16,
+            target_entropy=-5.0,
+            seed=60,
+        ),
+    )
+
+    assert len(report.cases) == 5
+    assert report.summary["ablations"] == 5
+    assert "best_ablation_by_sharpe" in report.summary
     assert "robust_ready" in report.summary

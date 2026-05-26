@@ -126,6 +126,30 @@ Interpretation:
 - No case passes the internal walk-forward robustness gate.
 - The current failure mode is consistent with insufficient data diversity and reward/environment mismatch, not with a proven impossibility of RL.
 
+### SAC Allocator Reward Ablation
+
+The reward ablation report removes one public reward component at a time:
+
+- cases: `10`
+- ablations: `5`
+- best ablation by Sharpe: `no_drawdown_penalty`
+- worst ablation by Sharpe: `no_concentration_penalty`
+- best mean Sharpe delta: `-0.1789425443042961`
+- full reward mean Sharpe delta: `-0.1791830938487189`
+- best minus full Sharpe delta: `0.0002405495444227912`
+- mean Sharpe delta: `-0.17923910952356698`
+- worst Sharpe delta: `-0.40148032323206045`
+- mean total return delta: `0.000780051480848698`
+- robust case rate: `0.0`
+- robust-ready: `false`
+
+Interpretation:
+
+- Removing individual penalties barely changes the result.
+- The reward is not the only bottleneck.
+- The current state representation and synthetic data coverage are probably too weak to let SAC learn a stable allocator.
+- The next redesign should prioritize broader regime/data generation and stronger baselines before tuning reward coefficients.
+
 ## What The Literature Suggests
 
 ### 1. Trading RL Is Mostly Offline RL
@@ -166,6 +190,9 @@ Relevant papers:
 - [Reinforcement Learning in Financial Markets](https://www.mdpi.com/2306-5729/4/3/110)
 - [FinRL: A Deep Reinforcement Learning Library for Automated Stock Trading in Quantitative Finance](https://arxiv.org/abs/2011.09607)
 - [FinRL: Deep Reinforcement Learning Framework to Automate Trading in Quantitative Finance](https://arxiv.org/abs/2111.09395)
+- [DeepTrader: A Deep Reinforcement Learning Approach for Risk-Return Balanced Portfolio Management with Market Conditions Embedding](https://ojs.aaai.org/index.php/AAAI/article/view/16144)
+- [An adaptive portfolio trading system: A risk-return portfolio optimization using recurrent reinforcement learning with expected maximum drawdown](https://www.sciencedirect.com/science/article/pii/S0957417417304402)
+- [A Risk-Aware Reinforcement Learning Reward for Financial Trading](https://arxiv.org/abs/2506.04358)
 
 Implication for this repo:
 
@@ -330,7 +357,7 @@ Required artifacts:
 - walk-forward SAC allocator report: done
 - multi-seed SAC allocator report: first version done
 - transaction-cost stress report: first version done
-- reward ablation report
+- reward ablation report: first version done
 - individual-candidate benchmark report
 
 ### Phase 3. Add Offline RL Safety

@@ -389,6 +389,26 @@ Interpretation:
 - The current structure should be treated as a falsification harness, not a strategy.
 - The next improvement should be reward ablation, candidate benchmark decomposition, and broader data generation before adding more RL algorithms.
 
+Reward ablation result:
+
+- cases: `10`
+- ablations: `5`
+- best ablation by Sharpe: `no_drawdown_penalty`
+- worst ablation by Sharpe: `no_concentration_penalty`
+- best mean Sharpe delta: `-0.1789425443042961`
+- full reward mean Sharpe delta: `-0.1791830938487189`
+- best minus full Sharpe delta: `0.0002405495444227912`
+- mean Sharpe delta: `-0.17923910952356698`
+- robust case rate: `0.0`
+- robust-ready: `false`
+
+Interpretation:
+
+- Individual reward penalties are not driving the failure.
+- The tiny difference between full reward and the best ablation suggests the current policy is not strongly using the risk-shaping terms.
+- The bottleneck is more likely weak state/data coverage and environment realism.
+- Next work should add multi-regime data generation and candidate-level benchmark decomposition before tuning coefficients.
+
 ## Recommended Roadmap
 
 ### Phase 1. Keep RL As A Risk Controller
