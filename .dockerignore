@@ -4,5 +4,7 @@ __pycache__
 .pytest_cache
 .ruff_cache
 reports/*.json
+reports/*.jsonl
 reports/*.csv
+artifacts/
 src/*.egg-info
